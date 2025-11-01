@@ -35,7 +35,7 @@ source ~/.bash_profile
 source activate jwst
 pip install jwst
 
-python step3_photometry.py """ + fl + " " + fl.replace("SCI", "ERR") + " " + long_sci + " " + long_sci.replace("SCI", "ERR") + " " + fl.split("_SCI")[0] + ".csv")
+python ~/NIRCam_ramp/step3_photometry.py """ + fl + " " + fl.replace("SCI", "ERR") + " " + long_sci + " " + long_sci.replace("SCI", "ERR") + " " + fl.split("_SCI")[0] + ".csv")
     f.close()
 
     print(subprocess.getoutput("sbatch tmp.sh"))

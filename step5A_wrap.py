@@ -26,14 +26,15 @@ pip install jwst
 
 chips_done = []
 for fl in fls:
-    chip = fl.split("_")[3]
+    chip = fl.split("_")[1] + ":" + fl.split("_")[3]
     assert fl.split("_")[4] == "uncal.fits"
 
     if chips_done.count(chip) == 0:
         chips_done.append(chip)
         
-        f.write("python step5_nonlin.py " + fl + '\n')
+        f.write("python ~/NIRCam_ramp/step5_nonlin.py " + fl + '\n')
 f.close()
-assert len(chips_done) == 10
+
+print("chips_done", chips_done)
 
 print(subprocess.getoutput("sbatch tmp.sh"))

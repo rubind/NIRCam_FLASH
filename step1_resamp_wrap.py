@@ -30,7 +30,7 @@ source ~/.bash_profile
 source activate jwst
 pip install jwst
 
-python resamp.py """ + outputfl + " " + " ".join(these_fls))
+python ~/NIRCam_ramp/resamp.py """ + outputfl + " " + " ".join(these_fls))
     f.close()
 
     print(outputfl)

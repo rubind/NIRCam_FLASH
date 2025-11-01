@@ -28,7 +28,7 @@ for fl in fls:
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
 
-python step4_find_WD.py """ + fl)
+python ~/NIRCam_ramp/step4_find_WD.py """ + fl)
     f.close()
 
     print(subprocess.getoutput("sbatch tmp.sh"))
