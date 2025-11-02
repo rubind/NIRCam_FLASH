@@ -52,8 +52,9 @@ source ~/.bash_profile
 cd """ + pwd + '\n')
 
 
-        f.write("python step6_do_phot.py " + fl + " 0 " + " ".join(star_inds[i::n_jobs]) + '\n')
+        f.write("python ~/NIRCam_ramp/step6_do_phot.py " + fl + " 0 " + " ".join(star_inds[i::n_jobs]) + '\n')
 
         f.close()
         
         print(subprocess.getoutput("sbatch tmp.sh"))
+

@@ -38,7 +38,7 @@ pip install jwst
 
     for i in range(fls_per_job):
         if len(fls) > 0:
-            f.write("python step5_nonlin.py " + fls[-1] + '\n')
+            f.write("python ~/NIRCam_ramp/step5_nonlin.py " + fls[-1] + '\n')
             del fls[-1]
     f.close()
 

@@ -7,6 +7,7 @@ from FileRead import readcol
 from scipy.interpolate import RectBivariateSpline
 import astropy.wcs as wcs
 import tqdm
+import subprocess
 
 def weighted_rms(x, w, subtract_mean=True):
     """
@@ -154,63 +155,85 @@ print("python step6_do_phot.py WD_jw02559001001_02101_nrca2.txt 0 0 1 2 3 ... th
 write_fits = int(sys.argv[2])
 
 
-psf_FN_short = read_PSF("F150W2_10x_PSF.fits")
-psf_FN_long = read_PSF("F322W2_10x_PSF.fits")
+whoami = subprocess.getoutput("whoami")
 
+psf_FNs = {}
+for fl in glob.glob("/home/" + whoami + "/NIRCam_ramp/F*10x_PSF.fits"):
+    filt_name = fl.split("/")[-1].split("_")[0]
+    print("Reading ", filt_name, fl)
+    psf_FNs[filt_name] = read_PSF(fl)
 
-
+    
 
 short_data_cubes = []
 long_data_cubes = []
 short_xys = []
 long_xys = []
-fls = np.sort(glob.glob(sys.argv[1].replace("WD_", "").split(".")[0].replace("_nrc", "*_nrc") + "_uncallin.fits"))
+fls = []
+short_filts = []
+long_filts = []
 
-for fl in tqdm.tqdm(fls):
+tmp_fls = np.sort(glob.glob(sys.argv[1].replace("WD_", "").split(".")[0].replace("_nrc", "*_nrc") + "_uncallin.fits"))
+
+for fl in tqdm.tqdm(tmp_fls):
     print(fl)
 
     f = fits.open(fl)
     print(f.info())
-    dat = f["SCI"].data[0]*1.
-    sat_mask = (f["GROUPDQ"].data[0] & 2) != 0    # shape: (nint, ngroup, ny, nx)
-    dat[sat_mask] = np.nan
-
-    short_data_cubes.append(dat)
+    n_integrations = len(f["SCI"].data)
+    print("n_integrations", n_integrations)
     f.close()
 
-    f = fits.open(fl.replace("_uncallin", "_cal"))
-    print(f.info())
-    w = wcs.WCS(f["SCI"].header, f).celestial
-    short_xys.append(
-        np.array(np.around(w.all_world2pix(np.array([ras, decs]).T, 1)), dtype=np.int32)
+    
+    for int_ind in range(n_integrations):
+        fls.append(fl + ":" + str(int_ind))
+        
+        f = fits.open(fl)
+        print(f.info())
+        dat = f["SCI"].data[int_ind]*1.
+        sat_mask = (f["GROUPDQ"].data[int_ind] & 2) != 0    # shape: (nint, ngroup, ny, nx)
+        dat[sat_mask] = np.nan
+        
+        short_data_cubes.append(dat)
+        short_filts.append(f[0].header["FILTER"])
+        f.close()
+        
+        f = fits.open(fl.replace("_uncallin", "_cal"))
+        print(f.info())
+        w = wcs.WCS(f["SCI"].header, f).celestial
+        short_xys.append(
+            np.array(np.around(w.all_world2pix(np.array([ras, decs]).T, 1)), dtype=np.int32)
         )
-    f.close()
+        f.close()
 
-    print(short_xys[-1].shape)
+        print(short_xys[-1].shape)
 
-    #f = open("ds9.reg", 'w')
-    #f.write("""# Region file format: DS9 version 4.1
-    #global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
-    #image
-    #""")
-    #for i in range(len(short_xys[-1])):
-    #    f.write("circle(%f,%f,5)\n" % (short_xys[-1][i][0], short_xys[-1][i][1]))
-    #f.close()
+        #f = open("ds9.reg", 'w')
+        #f.write("""# Region file format: DS9 version 4.1
+        #global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
+        #image
+        #""")
+        #for i in range(len(short_xys[-1])):
+        #    f.write("circle(%f,%f,5)\n" % (short_xys[-1][i][0], short_xys[-1][i][1]))
+        #f.close()
+        
+        f = fits.open(fl.split("_uncallin")[0][:-1] + "long_uncallin.fits")
+        print(f.info())
+        dat = f["SCI"].data[int_ind]*1.
+        sat_mask = (f["GROUPDQ"].data[int_ind] & 2) != 0    # shape: (nint, ngroup, ny, nx)
+        dat[sat_mask] = np.nan
+        long_data_cubes.append(dat)
+        long_filts.append(f[0].header["FILTER"])
 
-    f = fits.open(fl.split("_uncallin")[0][:-1] + "long_uncallin.fits")
-    print(f.info())
-    dat = f["SCI"].data[0]*1.
-    sat_mask = (f["GROUPDQ"].data[0] & 2) != 0    # shape: (nint, ngroup, ny, nx)
-    dat[sat_mask] = np.nan
-    long_data_cubes.append(dat)
-    f.close()
+        f.close()
+        
 
-    f = fits.open(fl.split("_uncallin")[0][:-1] + "long_cal.fits")
-    w = wcs.WCS(f["SCI"].header, f).celestial
-    long_xys.append(
-        np.array(np.around(w.all_world2pix(np.array([ras, decs]).T, 1)), dtype=np.int32)
+        f = fits.open(fl.split("_uncallin")[0][:-1] + "long_cal.fits")
+        w = wcs.WCS(f["SCI"].header, f).celestial
+        long_xys.append(
+            np.array(np.around(w.all_world2pix(np.array([ras, decs]).T, 1)), dtype=np.int32)
         )
-    f.close()
+        f.close()
 
     
 
@@ -248,8 +271,8 @@ for istr in tqdm.tqdm(i_range):
                 long_cutout = long_cutout[1:] - long_cutout[:-1]
                 
 
-                short_phot, short_RMSs, short_model = do_phot(short_cutout, psf_FN_short)#, save_result = "short_" + fls[j].split(".")[0] + ".fits")
-                long_phot, long_RMSs, long_model = do_phot(long_cutout, psf_FN_long)#, save_result = "long_" + fls[j].split(".")[0] + ".fits")
+                short_phot, short_RMSs, short_model = do_phot(short_cutout, psf_FNs[short_filts[j]])#, save_result = "short_" + fls[j].split(".")[0] + ".fits")
+                long_phot, long_RMSs, long_model = do_phot(long_cutout, psf_FNs[long_filts[j]])#, save_result = "long_" + fls[j].split(".")[0] + ".fits")
 
                 print("short_cutout", short_cutout.shape)
                 print("long_cutout", long_cutout.shape)
@@ -263,8 +286,8 @@ for istr in tqdm.tqdm(i_range):
                                                    long_cutout[t], long_model[t], long_cutout[t] - long_model[t])))
                 this_im = np.concatenate(tuple([item.T for item in this_im]))
                 
-                to_write = [fls[j], i, short_xy[0], short_xy[1], "short_phot:"] + list(short_phot) + [
-                    "short_RMS:"] + list(short_RMSs) + [long_xy[0], long_xy[1], "long_phot:"] + list(long_phot) + [
+                to_write = [fls[j], i, short_filts[j], short_xy[0], short_xy[1], "short_phot:"] + list(short_phot) + [
+                    "short_RMS:"] + list(short_RMSs) + [long_filts[j], long_xy[0], long_xy[1], "long_phot:"] + list(long_phot) + [
                         "long_RMS:"] + list(long_RMSs)
                 
                 to_write = [str(item) for item in to_write]
