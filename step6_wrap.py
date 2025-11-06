@@ -49,6 +49,8 @@ for fl in fls:
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
 
+
+
 cd """ + pwd + '\n')
 
 

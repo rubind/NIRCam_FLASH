@@ -5,6 +5,8 @@ from jwst.saturation import SaturationStep
 from jwst.superbias import SuperBiasStep
 from jwst.refpix import RefPixStep
 from jwst.linearity import LinearityStep
+import crds
+from crds.client import getreferences
 import sys
 
 # Load your uncal ramp
@@ -18,7 +20,10 @@ ramp = DQInitStep.call(ramp)
 ramp = SaturationStep.call(ramp)   # populates SAT DQ flags using reference full-well
 ramp = SuperBiasStep.call(ramp)    # subtract superbias
 ramp = RefPixStep.call(ramp)       # reference pixel correction
+#ramp = FirstFrameStep.call(ramp)      # correct reset anomaly on first group
+#ramp = LastFrameStep.call(ramp)       # correct last-group anomaly
 ramp = LinearityStep.call(ramp)    # <-- applies per-pixel polynomial linearization to groups
+ramp = DarkCurrentStep.call(ramp)     # subtract dark current + amp glow using ref files
 
 # Now ramp.data contains linearized groups (shape: nints, ngroups, ny, nx)
 

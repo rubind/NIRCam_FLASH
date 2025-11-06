@@ -8,6 +8,10 @@ from scipy.interpolate import RectBivariateSpline
 import astropy.wcs as wcs
 import tqdm
 import subprocess
+from astropy.time import Time
+
+
+
 
 def weighted_rms(x, w, subtract_mean=True):
     """
@@ -97,13 +101,16 @@ def do_phot(data_cube, psf_FN, save_result = ""):
     
     for i in range(2):
         P, NA, NA = miniLM_new(ministart = P,
-                               miniscale = [0., 0.] + [median_P[2]/10.]*len(data_cube),
+                               miniscale = [0., 0.] + [median_P[2]/5.]*len(data_cube),
                                residfn = residfn, passdata = [data_cube, psf_FN])
 
-        P, NA, NA = miniNM_new(ministart = P, miniscale = [0., 0.] + [median_P[2]/10.]*len(data_cube),
+        scale_in_flux = median_P[2]/5.
+        scale_in_flux = max(scale_in_flux, -2*min(P[2:]))
+        
+        P, NA, NA = miniNM_new(ministart = P, miniscale = [0., 0.] + [scale_in_flux]*len(data_cube),
                                chi2fn = chi2fn, passdata = [data_cube, psf_FN], compute_Cmat = False)
         
-        print(i, P)
+        print("iteration", i, P)
 
     model = modelfn(patch = half_patch*2 + 1,
                     n_samps = len(data_cube),
@@ -172,6 +179,7 @@ long_xys = []
 fls = []
 short_filts = []
 long_filts = []
+mjds = []
 
 tmp_fls = np.sort(glob.glob(sys.argv[1].replace("WD_", "").split(".")[0].replace("_nrc", "*_nrc") + "_uncallin.fits"))
 
@@ -182,7 +190,10 @@ for fl in tqdm.tqdm(tmp_fls):
     print(f.info())
     n_integrations = len(f["SCI"].data)
     print("n_integrations", n_integrations)
+
     f.close()
+
+    
 
     
     for int_ind in range(n_integrations):
@@ -190,6 +201,7 @@ for fl in tqdm.tqdm(tmp_fls):
         
         f = fits.open(fl)
         print(f.info())
+        mjds.append(f["INT_TIMES"].data["int_start_MJD_UTC"][int_ind] + np.arange(f[0].header["NGROUPS"])*f[0].header["TGROUP"]/86400.)
         dat = f["SCI"].data[int_ind]*1.
         sat_mask = (f["GROUPDQ"].data[int_ind] & 2) != 0    # shape: (nint, ngroup, ny, nx)
         dat[sat_mask] = np.nan
@@ -286,7 +298,7 @@ for istr in tqdm.tqdm(i_range):
                                                    long_cutout[t], long_model[t], long_cutout[t] - long_model[t])))
                 this_im = np.concatenate(tuple([item.T for item in this_im]))
                 
-                to_write = [fls[j], i, short_filts[j], short_xy[0], short_xy[1], "short_phot:"] + list(short_phot) + [
+                to_write = [fls[j], i, "times"] + list(mjds[j][1:]) + ["short_filt", short_filts[j], short_xy[0], short_xy[1], "short_phot:"] + list(short_phot) + [
                     "short_RMS:"] + list(short_RMSs) + [long_filts[j], long_xy[0], long_xy[1], "long_phot:"] + list(long_phot) + [
                         "long_RMS:"] + list(long_RMSs)
                 
