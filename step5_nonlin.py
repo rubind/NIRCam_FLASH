@@ -9,8 +9,8 @@ import crds
 from crds.client import getreferences
 import sys
 
-def do_flat():
-      refs = get_crds_refs_from_model(ramp)
+def do_flat(ramp):
+    refs = get_crds_refs_from_model(ramp)
     flat_path = refs.get("flat")
     area_path = refs.get("area")
     if not flat_path or not os.path.exists(flat_path):
@@ -45,11 +45,8 @@ def do_flat():
     # Combined multiplicative correction map:
     #   corr = flat * pam_factor
     # We want to divide the image by corr.
-    corr = flat_safe * pam_safe
-
-    diffs_corr = diffs / corr  # still DN/s, now flat + PAM corrected
-
-
+    corr = flat_safe #* pam_safe No PAM, as flats are supposed to be uniform detector illumination?
+    return corr
 
 
 # Load your uncal ramp
@@ -71,10 +68,16 @@ ramp = DarkCurrentStep.call(ramp)     # subtract dark current + amp glow using r
 
 # Now ramp.data contains linearized groups (shape: nints, ngroups, ny, nx)
 
-
+corr = do_flat(ramp)
 
 
 newfl = sys.argv[1].replace("_uncal", "_uncallin")
 assert newfl != sys.argv[1]
 
 ramp.save(newfl)
+
+f = fits.open(newfl, 'update')
+f["SCI"].data /= corr
+f.flush()
+f.close()
+
