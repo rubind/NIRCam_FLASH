@@ -23,10 +23,10 @@ while len(fls) > 0:
     f.write("""#!/bin/bash
 #SBATCH --job-name=phot
 #SBATCH --partition=shared,kill-shared
-#SBATCH --time=0-01:00:00 ## time format is DD-HH:MM:SS
+#SBATCH --time=0-02:00:00 ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=4G # Memory per node my job requires
+#SBATCH --mem=16G # Memory per node my job requires
 #SBATCH --error=example-%A.err # %A - filled with jobid, where to write the stderr
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile

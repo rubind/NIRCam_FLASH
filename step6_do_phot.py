@@ -82,12 +82,10 @@ def chi2fn(P, passdata):
     return np.dot(resid, resid)
 
 def do_phot(data_cube, psf_FN, save_result = ""):
-    P = [0., 0.] + [100.]*len(data_cube)
-
     median_data_cube = np.array([np.nanmedian(data_cube, axis = 0)])
     assert median_data_cube.shape == (1, half_patch*2 + 1, half_patch*2 + 1), str(median_data_cube.shape)
 
-    median_P = [0., 0., 100.]
+    median_P = [0., 0., 500.]
     for i in range(2):
         median_P, NA, NA = miniLM_new(ministart = median_P, miniscale = [0., 0., median_P[2]/10.],
                                       residfn = residfn, passdata = [median_data_cube, psf_FN])
