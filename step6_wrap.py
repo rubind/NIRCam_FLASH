@@ -4,6 +4,8 @@ import sys
 
 n_per_job = 50
 
+use_model_PSF = sys.argv[1]
+
 print("Ready to remove old photometry")
 input()
 
@@ -40,7 +42,7 @@ for fl in fls:
         f = open("tmp.sh", 'w')
         f.write("""#!/bin/bash
 #SBATCH --job-name=phot
-#SBATCH --partition=shared
+#SBATCH --partition=shared,kill-shared
 #SBATCH --time=0-20:00:00 ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
@@ -54,7 +56,7 @@ source ~/.bash_profile
 cd """ + pwd + '\n')
 
 
-        f.write("python ~/NIRCam_ramp/step6_do_phot.py " + fl + " 0 " + " ".join(star_inds[i::n_jobs]) + '\n')
+        f.write("python ~/NIRCam_ramp/step6_do_phot.py " + fl + " 0 " + " " + use_model_PSF + " " + " ".join(star_inds[i::n_jobs]) + '\n')
 
         f.close()
         

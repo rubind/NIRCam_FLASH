@@ -8,7 +8,7 @@ import sys
 
 color = F150W2_mag_ab - F322W2_mag_ab
 
-inds = np.where((color < 0.5)*(F150W2_mag_ab < 25)) #(color < 0.25+(F150W2_mag_ab - 24)*0.25/(28 - 24)))
+inds = np.where((color < 2)*(F150W2_mag_ab < 27)*(color > -0.75)) #(color < 0.25+(F150W2_mag_ab - 24)*0.25/(28 - 24)))
 
 plt.figure(figsize = (18, 12))
 plt.plot(color, F150W2_mag_ab, '.', color = 'b', alpha = 0.1)

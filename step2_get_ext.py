@@ -2,7 +2,7 @@ import glob
 from astropy.io import fits
 import tqdm
 
-for fl in tqdm.tqdm(glob.glob("*resample*fits")):
+for fl in tqdm.tqdm(glob.glob("F*resample*fits")):
     # jw02559001003_03101_nrcblong
     output = "_".join(fl.split("_")[:3])
 

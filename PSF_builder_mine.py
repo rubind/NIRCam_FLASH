@@ -176,7 +176,7 @@ def estimate_PSF_all_stars(all_dat_list, all_mask_list, verbose = False):
     last_PSF = P2d*1.
 
     
-    while (compare_A(P2d, last_PSF) > 0.005) or (PSF_iter < 2):
+    while ((compare_A(P2d, last_PSF) > 0.005) or (PSF_iter < 2)) and (PSF_iter < 5):
         PSF_iter += 1
         last_PSF = P2d*1.
         
@@ -441,7 +441,12 @@ def build_pooled_epsf(
 if __name__ == "__main__":
     [source_id, x_sw, y_sw, x_lw, y_lw, ra_deg, dec_deg] = readcol(sys.argv[1], 'f,ff,ff,ff') # E.g., WD_jw02729001003_02105_nrca3.txt
     assert len(x_sw) > 10
-    
+
+    verbose = sys.argv[2]
+    chip_filter = sys.argv[3]
+    images = sys.argv[4:]
+
+    """
     for short_long in [0, 1]:
         glob_str = sys.argv[1].replace(".txt", "_cal.fits").replace("WD_", "")
         if short_long:
@@ -453,12 +458,12 @@ if __name__ == "__main__":
             
         print("Glob ", the_glob)
         images = glob.glob(the_glob)
-
-        diag = build_pooled_epsf(
-            images, ra_deg, dec_deg,
-            oversampling=4,
-            cutout_size=21,
-            verbose = int(sys.argv[2]),
-            out_name = the_glob.replace("_*_", "_")
-         )
+    """
+    diag = build_pooled_epsf(
+        images, ra_deg, dec_deg,
+        oversampling=4,
+        cutout_size=21,
+        verbose = verbose,
+        out_name = chip_filter
+    )
     

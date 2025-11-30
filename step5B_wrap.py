@@ -6,6 +6,7 @@ fls_per_job = int(sys.argv[1])
 
 
 fls = glob.glob("*_uncal.fits")
+done_fls = glob.glob("*_uncallin.fits")
 
 print(fls)
 
@@ -38,7 +39,10 @@ pip install jwst
 
     for i in range(fls_per_job):
         if len(fls) > 0:
-            f.write("python ~/NIRCam_ramp/step5_nonlin.py " + fls[-1] + '\n')
+            if done_fls.count(fls[-1].replace("_uncal.fits", "_uncallin.fits")) == 0:
+                f.write("python ~/NIRCam_ramp/step5_nonlin.py " + fls[-1] + '\n')
+            else:
+                print("Already done")
             del fls[-1]
     f.close()
 

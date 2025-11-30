@@ -28,12 +28,12 @@ OUT_ECSV   = sys.argv[5]
 
 # Detection tuning (conservative; tweak for depth vs. shredding)
 NSIG_DET = 1.35          # threshold in sigma for segmentation detection
-MIN_PIX  = 10            # min connected pixels for a detection
+MIN_PIX  = 5            # min connected pixels for a detection
 DEBLEND_NTHRESH = 64
 DEBLEND_CONT    = 0.0005 # more aggressive deblending in crowded fields
 
 # Background mesh (keep small-ish for crowding)
-BKG_BOXSIZE   = 48
+BKG_BOXSIZE   = 12
 BKG_FILTERSIZE = 3
 
 # Photometry: choose small apertures for S/N, then aperture-correct empirically
@@ -75,6 +75,10 @@ def detect_on_mosaic(sci, wcs, nsig=1.3, minpix=10):
     bkg = Background2D(sci, box_size=BKG_BOXSIZE, filter_size=BKG_FILTERSIZE,
                        bkg_estimator=SExtractorBackground(), exclude_percentile=10.0)
     data_sub = sci - bkg.background
+
+    from DavidsNM import save_img
+    save_img(data_sub, "data_sub.fits")
+
     thresh = bkg.background + nsig * bkg.background_rms
 
     segm = detect_sources(data_sub, thresh, npixels=minpix)

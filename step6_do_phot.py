@@ -155,18 +155,46 @@ def read_PSF(fl):
 half_patch = 5
 
 print("python step6_do_phot.py WD_jw02559001001_02101_nrca2.txt 0 0 1 2 3 ... the first 0 is for writing out a fits file")
-[source_ids, x_sw, y_sw, NA, NA, ras, decs] = readcol(sys.argv[1], 'f,ffff,ff')
 
-write_fits = int(sys.argv[2])
+input_fl = sys.argv[1]
+short_wave_fl = sys.argv[2]
+[source_ids, x_sw, y_sw, NA, NA, ras, decs] = readcol(input_fl, 'f,ffff,ff')
+
+write_fits = int(sys.argv[3])
+use_model_PSF = int(sys.argv[4])
+
+prefix = "photo_subset_" + use_model_PSF*"modelPSF" + (1 - use_model_PSF)*("empiricalPSF") + "_"
+
+if len(sys.argv) > 4:
+    f_phot = open(prefix + sys.argv[1].split(".")[0] + "_" + sys.argv[4] + "--" + sys.argv[-1] + ".txt", 'w')
+    i_range = sys.argv[4:]
+else:
+    f_phot = open(prefix + sys.argv[1].split(".")[0] + ".txt", 'w')
+    i_range = range(len(source_ids))
+
+
+
 
 
 whoami = subprocess.getoutput("whoami")
 
+
 psf_FNs = {}
-for fl in glob.glob("/home/" + whoami + "/NIRCam_ramp/F*10x_PSF.fits"):
-    filt_name = fl.split("/")[-1].split("_")[0]
-    print("Reading ", filt_name, fl)
-    psf_FNs[filt_name] = read_PSF(fl)
+if use_model_PSF:
+    for fl in glob.glob("/home/" + whoami + "/NIRCam_ramp/F*10x_PSF.fits"):
+        filt_name = fl.split("/")[-1].split("_")[0]
+        print("Reading ", filt_name, fl)
+        psf_FNs[filt_name] = read_PSF(fl)
+else:
+    # WD_jw02729001001_02103_nrca1.txt
+    # PSF_10x_jw02729001004_02105_nrca3_cal.fits
+    psf_FNs["short"] = read_PSF("PSF_10x_" + short_wave_fl.replace("WD_", "").split(".")[0] + "_cal.fits")
+
+    a_not_b = short_wave_fl.count("_nrca")
+    psf_FNs["long"] = read_PSF("PSF_10x_" + short_wave_fl.replace("WD_", "").split("_nrc")[0] + "_nrc" + "a"*a_not_b + "b"*(1 - a_not_b) + "long_cal.fits")
+
+    psf_FNs["short"](0., 0.)
+    psf_FNs["long"](0., 0.)
 
     
 
@@ -179,7 +207,8 @@ short_filts = []
 long_filts = []
 mjds = []
 
-tmp_fls = np.sort(glob.glob(sys.argv[1].replace("WD_", "").split(".")[0].replace("_nrc", "*_nrc") + "_uncallin.fits"))
+
+tmp_fls = [short_wave_fl]
 
 for fl in tqdm.tqdm(tmp_fls):
     print(fl)
@@ -208,7 +237,7 @@ for fl in tqdm.tqdm(tmp_fls):
         short_filts.append(f[0].header["FILTER"])
         f.close()
         
-        f = fits.open(fl.replace("_uncallin", "_cal"))
+        f = fits.open(fl.replace("_uncallin", "_tweakreg"))
         print(f.info())
         w = wcs.WCS(f["SCI"].header, f).celestial
         short_xys.append(
@@ -238,7 +267,7 @@ for fl in tqdm.tqdm(tmp_fls):
         f.close()
         
 
-        f = fits.open(fl.split("_uncallin")[0][:-1] + "long_cal.fits")
+        f = fits.open(fl.split("_uncallin")[0][:-1] + "long_tweakreg.fits")
         w = wcs.WCS(f["SCI"].header, f).celestial
         long_xys.append(
             np.array(np.around(w.all_world2pix(np.array([ras, decs]).T, 1)), dtype=np.int32)
@@ -247,12 +276,6 @@ for fl in tqdm.tqdm(tmp_fls):
 
     
 
-if len(sys.argv) > 3:
-    f_phot = open("photo_subset_" + sys.argv[1].split(".")[0] + "_" + sys.argv[3] + "--" + sys.argv[-1] + ".txt", 'w')
-    i_range = sys.argv[3:]
-else:
-    f_phot = open("photo_subset_" + sys.argv[1].split(".")[0] + ".txt", 'w')
-    i_range = range(len(source_ids))
 
 f_phot.write("#WD_fl  star_ind shortx shorty short_phot short_RMS longx longy long_phot long_RMS\n")
 
@@ -281,8 +304,15 @@ for istr in tqdm.tqdm(i_range):
                 long_cutout = long_cutout[1:] - long_cutout[:-1]
                 
 
-                short_phot, short_RMSs, short_model = do_phot(short_cutout, psf_FNs[short_filts[j]])#, save_result = "short_" + fls[j].split(".")[0] + ".fits")
-                long_phot, long_RMSs, long_model = do_phot(long_cutout, psf_FNs[long_filts[j]])#, save_result = "long_" + fls[j].split(".")[0] + ".fits")
+                if use_model_PSF:
+                    short_PSF_key = short_filts[j]
+                    long_PSF_key = long_filts[j]
+                else:
+                    short_PSF_key = "short"
+                    long_PSF_key = "long"
+                
+                short_phot, short_RMSs, short_model = do_phot(short_cutout, psf_FNs[short_PSF_key])#, save_result = "short_" + fls[j].split(".")[0] + ".fits")
+                long_phot, long_RMSs, long_model = do_phot(long_cutout, psf_FNs[long_PSF_key])#, save_result = "long_" + fls[j].split(".")[0] + ".fits")
 
                 print("short_cutout", short_cutout.shape)
                 print("long_cutout", long_cutout.shape)
@@ -311,7 +341,7 @@ for istr in tqdm.tqdm(i_range):
     all_ims = np.concatenate((tuple([item for item in all_ims])))
 
     if write_fits:
-        save_img(all_ims, "cutout_" + sys.argv[1].split(".")[0] + "_" + istr + ".fits")
+        save_img(all_ims, "cutout_" + sys.argv[1].split(".")[0] + "_" + use_model_PSF*"modelPSF" + (1 - use_model_PSF)*("empiricalPSF")  + "_" + istr + ".fits")
     
 f_phot.close()
 
