@@ -4,7 +4,7 @@ import subprocess
 print(subprocess.getoutput("rm -fv photo*merge*"))
 
 for phot_type in ["empirical", "model"]:
-    fls =  glob.glob("photo_subset_" + phot_type + "PSF_WD_*txt")
+    fls =  glob.glob("photo_subset_*" + phot_type + "*txt")
 
     prefixes = ["_".join(item.split("_")[:7]) for item in fls]
     

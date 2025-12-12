@@ -1,44 +1,67 @@
 import glob
 import subprocess
 import sys
+import numpy as np
+import time
 
-n_per_job = 50
+def qcount():
+    the_count = int(subprocess.getoutput("squeue | grep drubin | wc").split(None)[0])
+    print("count", the_count)
+    return the_count
+
 
 use_model_PSF = sys.argv[1]
+n_jobs_per_fl = int(sys.argv[2])
+n_jobs_max = int(sys.argv[3])
+
 
 print("Ready to remove old photometry")
-input()
+#input()
 
-print(subprocess.getoutput("rm -fv photo_subset_WD_*"))
+print(subprocess.getoutput("rm -fv photo_subset_*"))
 
 
-fls = glob.glob("WD*txt")
+wd_fl = glob.glob("WD*txt")[0]
 
-print(fls)
+f = open(wd_fl, 'r')
+lines = f.read().split('\n')
+f.close()
+
+good_stars = 0
+
+for line in lines[1:]:
+    parsed = line.split(None)
+
+    
+    try:
+        float(parsed[1])
+        good_line = 1
+    except:
+        good_line = 0
+        print("skipping", parsed)
+        
+
+    if good_line:
+        good_stars += 1
+
+
+
+
+fls = glob.glob("j*nrc??_uncallin.fits")
+
+print(fls, len(fls))
+print("star_inds", good_stars)
+
+assert good_stars > 100
 
 pwd = subprocess.getoutput("pwd")
 
+star_inds = np.arange(good_stars)
+star_inds = [str(item) for item in star_inds]
+
 
 for fl in fls:
-    f = open(fl, 'r')
-    lines = f.read().split('\n')
-    f.close()
-
-    line_count = 0
-    for line in lines:
-        parsed = line.split(None)
-        try:
-            float(parsed[1])
-            line_count += 1
-        except:
-            pass
-    n_jobs = int(line_count/float(n_per_job))
-
-    print("n_jobs", n_jobs)
-
-    star_inds = [str(ind) for ind in range(line_count)]
-    
-    for i in range(n_jobs):
+    for i in range(n_jobs_per_fl):
         f = open("tmp.sh", 'w')
         f.write("""#!/bin/bash
 #SBATCH --job-name=phot
@@ -51,14 +74,16 @@ for fl in fls:
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
 
-
-
 cd """ + pwd + '\n')
 
-
-        f.write("python ~/NIRCam_ramp/step6_do_phot.py " + fl + " 0 " + " " + use_model_PSF + " " + " ".join(star_inds[i::n_jobs]) + '\n')
+        
+        f.write("python ~/NIRCam_ramp/step6_do_phot.py " + wd_fl + " " + fl + " 0 " + " " + use_model_PSF + " " + " ".join(star_inds[i::n_jobs_per_fl]) + '\n')
 
         f.close()
-        
+
+        while qcount() > n_jobs_max:
+            print("Waiting...")
+            time.sleep(60)
+            
         print(subprocess.getoutput("sbatch tmp.sh"))
 

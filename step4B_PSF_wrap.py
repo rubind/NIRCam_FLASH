@@ -13,7 +13,7 @@ print(fls)
 
 filts = []
 
-for fl in fls:
+for fl in tqdm.tqdm(fls):
     f = fits.open(fl)
     filts.append(f[0].header["FILTER"])
     f.close()

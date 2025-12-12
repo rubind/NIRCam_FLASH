@@ -129,7 +129,7 @@ print("Before flat", np.sqrt(np.nanmean(np.square(f["SCI"].data))))
 f["SCI"].data /= corr
 f["SCI"].data *= gain_eminus_per_ADU
 
-f.append(fits.ImageHDU(data=read_noise, name="RN"))
+f.append(fits.ImageHDU(data=read_noise*gain_eminus_per_ADU, name="RN")) # Read noise is stored in ADU units. NOTE: CDS read noise, not single frame. sqrt(2) included!
 print("After flat", np.sqrt(np.nanmean(np.square(f["SCI"].data))))
 
 

@@ -439,8 +439,9 @@ def build_pooled_epsf(
 
 
 if __name__ == "__main__":
-    [source_id, x_sw, y_sw, x_lw, y_lw, ra_deg, dec_deg] = readcol(sys.argv[1], 'f,ff,ff,ff') # E.g., WD_jw02729001003_02105_nrca3.txt
-    assert len(x_sw) > 10
+    # x_pix y_pix RA_deg Dec_deg
+    [x_pix, y_pix, ra_deg, dec_deg] = readcol(sys.argv[1], 'ff,ff') # E.g., WD_jw02729001003_02105_nrca3.txt
+    assert len(ra_deg) > 10
 
     verbose = sys.argv[2]
     chip_filter = sys.argv[3]

@@ -81,7 +81,7 @@ def chi2fn(P, passdata):
     resid = residfn(P, passdata)
     return np.dot(resid, resid)
 
-def do_phot(data_cube, psf_FN, save_result = ""):
+def do_phot(data_cube, psf_FN, read_noise, save_result = ""):
     median_data_cube = np.array([np.nanmedian(data_cube, axis = 0)])
     assert median_data_cube.shape == (1, half_patch*2 + 1, half_patch*2 + 1), str(median_data_cube.shape)
 
@@ -116,14 +116,36 @@ def do_phot(data_cube, psf_FN, save_result = ""):
                     psf_FN = psf_FN, data_cube = data_cube)
 
     RMSs = []
+    uncs = []
     xs_1d = np.arange(half_patch*2 + 1, dtype=np.float64)
     xs_1d -= np.mean(xs_1d)
 
     for i in range(len(data_cube)):
-        RMSs.append(weighted_rms(data_cube[i] - model[i], w = psf_FN(xs_1d - P[0], xs_1d - P[1]))
-                    /(model[i].max())
-                    )
+        tmp_PSF = psf_FN(xs_1d - P[0], xs_1d - P[1])
+        tmp_PSF = tmp_PSF[np.where(1 - np.isnan(data_cube[i]))]
+        tmp_PSF_sum = np.sum(tmp_PSF)
         
+        if tmp_PSF_sum > 0.5:
+            RMSs.append(weighted_rms(data_cube[i] - model[i], w = psf_FN(xs_1d - P[0], xs_1d - P[1]))
+                        /(model[i].max())
+                        )
+
+            data_cube_variance = np.abs(data_cube[i]) + read_noise**2.
+
+            tmp_PSF = psf_FN(xs_1d - P[0], xs_1d - P[1])
+            
+            
+            uncs.append(
+                np.sqrt(
+                (   tmp_PSF**2. * data_cube_variance   ).sum() /
+                ((   tmp_PSF**2.  ).sum())**2.
+                )
+                )
+            
+        else:
+            RMSs.append(1.)
+            uncs.append(-1.)
+            
         
     if len(save_result) > 0:
         model = modelfn(patch = half_patch*2 + 1,
@@ -132,7 +154,7 @@ def do_phot(data_cube, psf_FN, save_result = ""):
                         psf_FN = psf_FN, data_cube = data_cube)
         save_patches(np.concatenate((data_cube, model, data_cube - model)), save_result)
         
-    return P[2:], RMSs, model
+    return P[2:], RMSs, model, uncs
 
 
 def read_PSF(fl):
@@ -158,19 +180,20 @@ print("python step6_do_phot.py WD_jw02559001001_02101_nrca2.txt 0 0 1 2 3 ... th
 
 input_fl = sys.argv[1]
 short_wave_fl = sys.argv[2]
-[source_ids, x_sw, y_sw, NA, NA, ras, decs] = readcol(input_fl, 'f,ffff,ff')
+#[source_ids, x_sw, y_sw, NA, NA, ras, decs] = readcol(input_fl, 'f,ffff,ff')
+[x_pix, y_pix, ras, decs] = readcol(input_fl, 'ff,ff') # E.g., WD_jw02729001003_02105_nrca3.txt
 
 write_fits = int(sys.argv[3])
 use_model_PSF = int(sys.argv[4])
 
-prefix = "photo_subset_" + use_model_PSF*"modelPSF" + (1 - use_model_PSF)*("empiricalPSF") + "_"
+prefix = "photo_subset_" + sys.argv[1].split(".")[0] + "_" + short_wave_fl.split(".")[0] + "_" + use_model_PSF*"modelPSF" + (1 - use_model_PSF)*("empiricalPSF")
 
-if len(sys.argv) > 4:
-    f_phot = open(prefix + sys.argv[1].split(".")[0] + "_" + sys.argv[4] + "--" + sys.argv[-1] + ".txt", 'w')
-    i_range = sys.argv[4:]
+if len(sys.argv) > 5:
+    f_phot = open(prefix + "_" + sys.argv[5] + "--" + sys.argv[-1] + ".txt", 'w')
+    i_range = sys.argv[5:]
 else:
-    f_phot = open(prefix + sys.argv[1].split(".")[0] + ".txt", 'w')
-    i_range = range(len(source_ids))
+    f_phot = open(prefix + ".txt", 'w')
+    i_range = range(len(ras))
 
 
 
@@ -188,18 +211,26 @@ if use_model_PSF:
 else:
     # WD_jw02729001001_02103_nrca1.txt
     # PSF_10x_jw02729001004_02105_nrca3_cal.fits
-    psf_FNs["short"] = read_PSF("PSF_10x_" + short_wave_fl.replace("WD_", "").split(".")[0] + "_cal.fits")
 
-    a_not_b = short_wave_fl.count("_nrca")
-    psf_FNs["long"] = read_PSF("PSF_10x_" + short_wave_fl.replace("WD_", "").split("_nrc")[0] + "_nrc" + "a"*a_not_b + "b"*(1 - a_not_b) + "long_cal.fits")
+    for fl in glob.glob("PSF_10x_" + short_wave_fl.split("_")[3] + "_*fits"):
+        print("fl", fl)
+        psf_FNs[fl.split("_")[-1].split(".fits")[0]] = read_PSF(fl)
 
-    psf_FNs["short"](0., 0.)
-    psf_FNs["long"](0., 0.)
+    for fl in glob.glob("PSF_10x_" + short_wave_fl.split("_")[3][:-1] + "long_*fits"):
+        print("fl", fl)
+        psf_FNs[fl.split("_")[-1].split(".fits")[0]] = read_PSF(fl)
 
+    for key in psf_FNs:
+        print(key)
+        print(psf_FNs[key](0., 0.))
     
 
 short_data_cubes = []
 long_data_cubes = []
+
+short_read_noise = []
+long_read_noise = []
+
 short_xys = []
 long_xys = []
 fls = []
@@ -235,13 +266,14 @@ for fl in tqdm.tqdm(tmp_fls):
         
         short_data_cubes.append(dat)
         short_filts.append(f[0].header["FILTER"])
+        short_read_noise.append(f["RN"].data*1.)
         f.close()
         
         f = fits.open(fl.replace("_uncallin", "_tweakreg"))
         print(f.info())
         w = wcs.WCS(f["SCI"].header, f).celestial
         short_xys.append(
-            np.array(np.around(w.all_world2pix(np.array([ras, decs]).T, 1)), dtype=np.int32)
+            np.array(np.around(w.all_world2pix(np.array([ras, decs]).T, 1, quiet = True)), dtype=np.int32)
         )
         f.close()
 
@@ -263,6 +295,7 @@ for fl in tqdm.tqdm(tmp_fls):
         dat[sat_mask] = np.nan
         long_data_cubes.append(dat)
         long_filts.append(f[0].header["FILTER"])
+        long_read_noise.append(f["RN"].data*1.)
 
         f.close()
         
@@ -270,7 +303,7 @@ for fl in tqdm.tqdm(tmp_fls):
         f = fits.open(fl.split("_uncallin")[0][:-1] + "long_tweakreg.fits")
         w = wcs.WCS(f["SCI"].header, f).celestial
         long_xys.append(
-            np.array(np.around(w.all_world2pix(np.array([ras, decs]).T, 1)), dtype=np.int32)
+            np.array(np.around(w.all_world2pix(np.array([ras, decs]).T, 1, quiet = True)), dtype=np.int32)
         )
         f.close()
 
@@ -279,14 +312,19 @@ for fl in tqdm.tqdm(tmp_fls):
 
 f_phot.write("#WD_fl  star_ind shortx shorty short_phot short_RMS longx longy long_phot long_RMS\n")
 
+all_ims = []
+
 for istr in tqdm.tqdm(i_range):
     i = int(istr)
 
-    all_ims = []
 
     for j in range(len(short_xys)): # Each image
         short_xy = short_xys[j][i]
         long_xy = long_xys[j][i]
+
+        #print("short_xy", short_xy)
+        #print("long_xy", long_xy)
+        
 
         if short_xy[0] > half_patch + 1 and short_xy[0] < 2048 - half_patch and short_xy[1] > half_patch + 1 and short_xy[1] < 2048 - half_patch:
             if long_xy[0] > half_patch + 1 and long_xy[0] < 2048 - half_patch and long_xy[1] > half_patch + 1 and long_xy[1] < 2048 - half_patch:
@@ -303,16 +341,21 @@ for istr in tqdm.tqdm(i_range):
                 short_cutout = short_cutout[1:] - short_cutout[:-1]
                 long_cutout = long_cutout[1:] - long_cutout[:-1]
                 
+                short_read_noise_cutout = short_read_noise[j][short_xy[1] - half_patch - 1: short_xy[1] + half_patch,
+                                                              short_xy[0] - half_patch - 1: short_xy[0] + half_patch]
 
-                if use_model_PSF:
-                    short_PSF_key = short_filts[j]
-                    long_PSF_key = long_filts[j]
-                else:
-                    short_PSF_key = "short"
-                    long_PSF_key = "long"
+                long_read_noise_cutout = long_read_noise[j][long_xy[1] - half_patch - 1: long_xy[1] + half_patch,
+                                                            long_xy[0] - half_patch - 1: long_xy[0] + half_patch]
                 
-                short_phot, short_RMSs, short_model = do_phot(short_cutout, psf_FNs[short_PSF_key])#, save_result = "short_" + fls[j].split(".")[0] + ".fits")
-                long_phot, long_RMSs, long_model = do_phot(long_cutout, psf_FNs[long_PSF_key])#, save_result = "long_" + fls[j].split(".")[0] + ".fits")
+
+                short_PSF_key = short_filts[j]
+                long_PSF_key = long_filts[j]
+
+                
+                short_phot, short_RMSs, short_model, short_uncs = do_phot(short_cutout, psf_FNs[short_PSF_key], read_noise = short_read_noise_cutout)
+                #, save_result = "short_" + fls[j].split(".")[0] + ".fits")
+                long_phot, long_RMSs, long_model, long_uncs = do_phot(long_cutout, psf_FNs[long_PSF_key], read_noise = long_read_noise_cutout)
+                #, save_result = "long_" + fls[j].split(".")[0] + ".fits")
 
                 print("short_cutout", short_cutout.shape)
                 print("long_cutout", long_cutout.shape)
@@ -326,9 +369,12 @@ for istr in tqdm.tqdm(i_range):
                                                    long_cutout[t], long_model[t], long_cutout[t] - long_model[t])))
                 this_im = np.concatenate(tuple([item.T for item in this_im]))
                 
-                to_write = [fls[j], i, "times"] + list(mjds[j][1:]) + ["short_filt", short_filts[j], short_xy[0], short_xy[1], "short_phot:"] + list(short_phot) + [
-                    "short_RMS:"] + list(short_RMSs) + [long_filts[j], long_xy[0], long_xy[1], "long_phot:"] + list(long_phot) + [
-                        "long_RMS:"] + list(long_RMSs)
+                to_write = [fls[j], i, ras[i], decs[i], "times"] + list(mjds[j][1:]) + [
+                    "short_filt", short_filts[j], short_xy[0], short_xy[1], "short_phot:"] + list(short_phot) + [
+                        "short_RMS:"] + list(short_RMSs) + [
+                            "short_uncs:"] + list(short_uncs) + [long_filts[j], long_xy[0], long_xy[1], "long_phot:"] + list(long_phot) + [
+                                "long_RMS:"] + list(long_RMSs) + [
+                                    "long_uncs"] + list(long_uncs)
                 
                 to_write = [str(item) for item in to_write]
 
@@ -338,10 +384,10 @@ for istr in tqdm.tqdm(i_range):
                 print("Out of range!")
         else:
             print("Out of range!")
-    all_ims = np.concatenate((tuple([item for item in all_ims])))
-
-    if write_fits:
-        save_img(all_ims, "cutout_" + sys.argv[1].split(".")[0] + "_" + use_model_PSF*"modelPSF" + (1 - use_model_PSF)*("empiricalPSF")  + "_" + istr + ".fits")
+            
+all_ims = np.concatenate((tuple([item for item in all_ims])))
+if write_fits:
+    save_img(all_ims, "cutout_" + prefix + "_" +  istr + ".fits")
     
 f_phot.close()
 
