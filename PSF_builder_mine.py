@@ -37,6 +37,9 @@ BKG_ESTIMATOR      = SExtractorBackground()
 
 # ---------------------------------------------------------------
 
+def save_patches_3d(threeD_item, name):
+    save_patches([np.reshape(item, [len(item)*CUTOUT_SIZE, CUTOUT_SIZE]) for item in threeD_item], name)
+
 
 def get_10x_design_matrix():
     x1d = np.arange(OVERSAMPLING*CUTOUT_SIZE)/float(OVERSAMPLING)
@@ -74,7 +77,10 @@ design_matrix = get_10x_design_matrix()
 
 def modelfn_all_stars(P, passdata):
     P2d = np.reshape(np.dot(design_matrix, P), [CUTOUT_SIZE*10]*2)
+    #d_P2d = np.reshape(np.dot(design_matrix, d_P), [CUTOUT_SIZE*10]*2)
+    
     ifn = RectBivariateSpline(x1d_10x, x1d_10x, P2d, kx = 2, ky = 2)
+    #d_ifn = RectBivariateSpline(x1d_10x, x1d_10x, d_P2d, kx = 2, ky = 2)
 
     native_x = np.arange(CUTOUT_SIZE, dtype=np.float64)
     native_x -= np.mean(native_x)
@@ -90,17 +96,22 @@ def residfn_all_stars(P, passdata):
     passdata = passdata[0]
 
     native_mod = modelfn_all_stars(P, passdata)
-    resid = (passdata["data"] - native_mod)*(1 - passdata["mask"])
+    resid = passdata["data"] - native_mod
     resid = resid.flatten()
+    resid = resid[np.where(1 - np.isnan(resid))]
+    
+    
     return np.sign(resid) * np.sqrt(np.abs(resid))
 
+
 def chi2fn_one_star(P, passdata):
-    dat, mask, ifn = passdata[0]
+    dat, ifn = passdata[0]
     native_x = np.arange(CUTOUT_SIZE, dtype=np.float64)
     native_x -= np.mean(native_x)
 
     mod = P[0]*ifn(native_x - P[1], native_x - P[2]) + P[3]
-    resid = (dat - mod)*(1 - mask)
+    resid = dat - mod
+    resid = resid[np.where(1 - np.isnan(resid))]
 
     if np.abs(P[1]) > 5 or np.abs(P[2]) > 5:
         return 1e100
@@ -112,12 +123,12 @@ def fit_ampl_x0y0sky(passdata, ifn):
         P, NA, NA = miniNM_new(ministart = [passdata["A"][i], passdata["x0"][i], passdata["y0"][i], passdata["sky"][i]],
                                miniscale = [passdata["A"][i]/10., 0.0, 0.0, 0.0],
                                chi2fn = chi2fn_one_star,
-                               passdata = [passdata["data"][i], passdata["mask"][i], ifn], compute_Cmat = False)
+                               passdata = [passdata["data"][i], ifn], compute_Cmat = False)
 
         P, NA, NA = miniNM_new(ministart = [P[0], passdata["x0"][i], passdata["y0"][i], passdata["sky"][i]],
                                miniscale = [P[0]/10., 1.0, 1.0, 0.0],
                                chi2fn = chi2fn_one_star,
-                               passdata = [passdata["data"][i], passdata["mask"][i], ifn], compute_Cmat = False)
+                               passdata = [passdata["data"][i], ifn], compute_Cmat = False)
 
         
         passdata["A"][i] = P[0]
@@ -128,7 +139,7 @@ def fit_ampl_x0y0sky(passdata, ifn):
         P, NA, NA = miniNM_new(ministart = [passdata["A"][i], passdata["x0"][i], passdata["y0"][i], passdata["sky"][i]],
                                miniscale = [0.0, 0.0, 0.0, 1.0],
                                chi2fn = chi2fn_one_star,
-                               passdata = [passdata["data"][i], passdata["mask"][i], ifn], compute_Cmat = False)
+                               passdata = [passdata["data"][i], ifn], compute_Cmat = False)
         passdata["sky"][i] = P[3]
 
     passdata["sky"] -= np.median(passdata["sky"])
@@ -144,10 +155,23 @@ def compare_A(PSF1, PSF2):
     print("rel_A", rel_A)
     print("RMS comparison", RMS)
     return RMS
+
+def renorm_P_PSF(P_PSF):
+    P2d = np.reshape(np.dot(design_matrix, P_PSF), [CUTOUT_SIZE*10]*2)
+    norm_term = P2d[4::10, 4::10].sum()
+
+    P2d /= norm_term
+    P_PSF /= norm_term
+    ifn = RectBivariateSpline(x1d_10x, x1d_10x, P2d, kx = 2, ky = 2)
     
-def estimate_PSF_all_stars(all_dat_list, all_mask_list, verbose = False):
-    passdata = dict(data = all_dat_list, mask = all_mask_list,
-                    A = np.zeros(len(all_dat_list)) + 100.,
+    return P_PSF, P2d, ifn
+
+
+    
+def estimate_PSF_all_stars(all_dat_list, t_midpoints, verbose = False):
+    
+    passdata = dict(data = all_dat_list,
+                    A = np.zeros(len(all_dat_list)) + 10000.,
                     x0 = np.zeros(len(all_dat_list)),
                     y0 = np.zeros(len(all_dat_list)),
                     sky = np.zeros(len(all_dat_list)))
@@ -160,19 +184,21 @@ def estimate_PSF_all_stars(all_dat_list, all_mask_list, verbose = False):
 
     P_PSF = np.exp(-0.1*(X**2. + Y**2.))
     P_PSF = np.reshape(P_PSF, (OVERSAMPLING*CUTOUT_SIZE)**2)
+    P_PSF, P2d, ifn = renorm_P_PSF(P_PSF)
     
+    
+    passdata = fit_ampl_x0y0sky(passdata, ifn)
     the_mod = modelfn_all_stars(P = P_PSF, passdata = passdata)
-    P2d = np.reshape(np.dot(design_matrix, P_PSF), [CUTOUT_SIZE*10]*2)
+    
     PSF_iter = 0
 
     if verbose:
         save_img(P2d, "PSF_10x_iter=%02i.fits" % 0)
-        save_patches(the_mod, "the_mod_iter=%02i.fits" % 0)
-        save_patches((all_dat_list - the_mod)*(1 - all_mask_list), "the_resid_iter=%02i.fits" % 0)
+        save_patches_3d(the_mod, "the_mod_iter=%02i.fits" % 0)
+        save_patches_3d(all_dat_list - the_mod, "the_resid_iter=%02i.fits" % 0)
 
-    P2d = np.reshape(np.dot(design_matrix, P_PSF), [CUTOUT_SIZE*10]*2)
-    ifn = RectBivariateSpline(x1d_10x, x1d_10x, P2d, kx = 2, ky = 2)
-
+    
+    
     last_PSF = P2d*1.
 
     
@@ -186,20 +212,22 @@ def estimate_PSF_all_stars(all_dat_list, all_mask_list, verbose = False):
                                    miniscale = np.ones((OVERSAMPLING*CUTOUT_SIZE)**2, dtype=np.float64),
                                    passdata = passdata,
                                    residfn = residfn_all_stars, verbose = True, maxiter = 10)
-        P2d = np.reshape(np.dot(design_matrix, P_PSF), [CUTOUT_SIZE*10]*2)
-        ifn = RectBivariateSpline(x1d_10x, x1d_10x, P2d, kx = 2, ky = 2)
+
+        P_PSF, P2d, ifn = renorm_P_PSF(P_PSF)
+        
+        passdata = fit_ampl_x0y0sky(passdata, ifn)
 
         the_mod = modelfn_all_stars(P = P_PSF, passdata = passdata)
         if verbose:
             save_img(P2d, "PSF_10x_iter=%02i.fits" % PSF_iter)
-            save_patches(the_mod, "the_mod_iter=%02i.fits" % PSF_iter)
-            the_resid = (all_dat_list - the_mod)*(1 - all_mask_list)
-            save_patches(the_resid, "the_resid_iter=%02i.fits" % PSF_iter)
+            save_patches_3d(the_mod, "the_mod_iter=%02i.fits" % PSF_iter)
+            the_resid = all_dat_list - the_mod
+            save_patches_3d(the_resid, "the_resid_iter=%02i.fits" % PSF_iter)
 
             the_norm_resid = the_resid*1.
             for i in range(len(the_resid)):
                 the_norm_resid[i] /= the_mod[i].max()
-            save_patches(the_norm_resid, "the_norm_resid_iter=%02i.fits" % PSF_iter)
+            save_patches_3d(the_norm_resid, "the_norm_resid_iter=%02i.fits" % PSF_iter)
 
         
     return P_PSF, P2d
@@ -230,61 +258,7 @@ def _background_2d(data, mask=None):
     )
     return bkg.background
 
-def _prepare_nddata(sci_bsub, dq=None):
-    mask = None
-    if dq is not None and USE_DQ_MASK:
-        mask = dq != DQ_GOOD_VALUE
-    return NDData(data=sci_bsub, mask=mask)
 
-def _positions_table(x, y):
-    t = Table()
-    t['x'] = x
-    t['y'] = y
-    return t
-
-def _rank_and_cap(epsfstar_list, keep_top_n: int):
-    """Rank candidate EPSFStar objects by total flux and cap to top-N."""
-    if keep_top_n is None or len(epsfstar_list) <= keep_top_n:
-        return epsfstar_list
-    fluxes = []
-
-    all_dats = [s.data*np.sqrt(1 - 2*s.mask)/np.nanmax(s.data*(1 - s.mask)) for s in epsfstar_list] # Mask > 0 is NaN
-    all_dats = [item - np.nanmedian(item) for item in all_dats]
-    all_dats = np.array(all_dats)
-
-    med_PSF = np.nanmedian(all_dats, axis = 0)
-
-    if 0:
-        save_patches(all_dats, "all_dats.fits")
-        save_img(med_PSF, "med_PSF.fits")
-    
-    inds = np.where(med_PSF > 0.05)
-
-    for s in epsfstar_list:
-        tmp_data = s.data*np.sqrt(1 - 2*s.mask)
-        med_subtracted_data = (tmp_data - np.nanmedian(tmp_data))
-        this_flux = np.nansum(med_PSF*med_subtracted_data)
-
-        if (s.data*(1 - s.mask)).max() < np.nanmedian(s.data*(1 - s.mask))*10:
-            this_flux = -1
-
-
-        #print(s)
-        #print(s.data)
-        #print(s.mask)
-        #print(s.dq)
-
-        if np.nanmax(med_subtracted_data[inds]) < np.nanmax(med_subtracted_data)*0.99:
-            this_flux = -1
-        
-        
-        fluxes.append(this_flux)
-
-    print("fluxes for selection", fluxes)
-    fluxes = np.array(fluxes)
-    
-    idx = np.argsort(fluxes)[::-1][:keep_top_n]
-    return [epsfstar_list[i] for i in idx]
 
 def _pixel_scale_arcsec(w: WCS):
     try:
@@ -335,33 +309,49 @@ def build_pooled_epsf(
         maxiters=MAX_ITERS,
         min_stars=MIN_STARS_REQUIRED,
         keep_top_n=KEEP_TOP_N_STARS,
-        out_name="",
         verbose = False):
     """Pool star cutouts across all images and build a single oversampled ePSF."""
     if len(image_paths) == 0:
         raise ValueError("Provide at least one _cal.fits image path.")
 
-    pooled_list = []  # will hold EPSFStar objects
+    all_dat_list = []
     pixscales = []
 
     for path in image_paths:
         print("Working on ", path)
-        
+        this_image_dat_list = []
+
         with fits.open(path) as hdul:
+            print(hdul.info())
+            
             sci = hdul['SCI'].data.astype(float)
+            sat_mask = (hdul["GROUPDQ"].data & 2) != 0    # shape: (nint, ngroup, ny, nx)
+            sci[sat_mask] = np.nan
+
+            shdr = hdul['SCI'].header
+            assert np.isclose(hdul[0].header["TGROUP"], 21.474)
+
+            t_midpoints_one_ramp = (np.arange(len(sci[0]), dtype=np.float64)*2 + 1.5)*10.737
+
+            t_midpoints = np.array(list(t_midpoints_one_ramp)*len(sci))
+            
+            print("t_midpoints", t_midpoints)
+
+            
+            
+        with fits.open(path.replace("_uncallin.fits", "_tweakreg.fits")) as hdul:
             shdr = hdul['SCI'].header
             w = WCS(shdr)
-            dq = hdul['DQ'].data if ('DQ' in hdul) else None
+            filter_name = hdul[0].header["FILTER"]
+            print("filter_name", filter_name)
+            out_name = path.split("_")[-2] + "_" + filter_name
 
-            mask_bad = ~np.isfinite(sci)             # NaN/Inf in SCI
-            sci[mask_bad] = 0.
-            dq[mask_bad] = 1
+            
             
 
-        ny, nx = sci.shape
-        bkg_mask = (dq != DQ_GOOD_VALUE) if (dq is not None and USE_DQ_MASK) else None
-        bkg2d = _background_2d(sci, mask=bkg_mask)
-        sci_bsub = sci - bkg2d
+        ny, nx = sci[0,0].shape
+        print("nx", nx, "ny", ny)
+        
 
         x, y = _sky_to_pixel(w, ra_deg_array, dec_deg_array)
         x, y = filter_close_pairs(x, y)
@@ -372,26 +362,61 @@ def build_pooled_epsf(
             continue
         print("HERE4")
 
-        nd = _prepare_nddata(sci_bsub, dq)
-        tmp_list = []
-
-        for i in range(len(x)):
-            tbl = _positions_table([x[i]], [y[i]])
-            try:
-                stars = extract_stars(nd, tbl, size=cutout_size)  # -> EPSFStars
-                tmp_list.extend(stars.all_stars)
-            except:
-                print("Problem with star ", i)
-        print("HERE3")
+        print("x", x, len(x), "y", y)
         
-        tmp_list = _rank_and_cap(tmp_list, keep_top_n = keep_top_n)
+        sci_diffs = sci[:, 1:] - sci[:, :-1]
+        print("sci_diffs", sci_diffs.shape)
+        sci_diffs = np.reshape(sci_diffs, [sci_diffs.shape[0]*sci_diffs.shape[1], sci_diffs.shape[2], sci_diffs.shape[3]])
+
+        median_diff = np.nanmedian(sci_diffs, axis = 0)
+        if verbose:
+            save_img(sci_diffs, "sci_diffs.fits")
+            save_img(median_diff, "median_diff.fits")
+
+        
+        
+        for i in range(len(x)):
+            this_image_dat_list.append(sci_diffs[:, int(np.around(y[i] - cutout_size/2)): int(np.around(y[i] + cutout_size/2)),
+                                          int(np.around(x[i] - cutout_size/2)): int(np.around(x[i] + cutout_size/2))])
+
+        for rough_iter in range(2):
+            PSF_rough_guess = np.nanmedian(np.array([np.median(item, axis = 0) for item in this_image_dat_list]), axis = 0)
+            PSF_rough_guess -= np.nanmedian(PSF_rough_guess)
+
+
+            if verbose:
+                save_img(PSF_rough_guess, "PSF_rough_guess_it=%i.fits" % rough_iter)
+
+            flux_estimates = []
+            for i in range(len(this_image_dat_list)):
+                med_dat = np.nanmedian(this_image_dat_list[i], axis = 0)
+                assert len(med_dat) == cutout_size
+
+                med_dat -= np.nanmedian(med_dat)
+                flux_estimates.append(np.nansum(med_dat*PSF_rough_guess))
+
+            if rough_iter == 0:
+                stars_to_keep = KEEP_TOP_N_STARS*2
+            else:
+                stars_to_keep = KEEP_TOP_N_STARS
+                
+            flux_cutoff = np.sort(flux_estimates)[-stars_to_keep]
+            print("flux_cutoff", flux_cutoff)
+
+            for i in range(len(this_image_dat_list))[::-1]:
+                if flux_estimates[i] < flux_cutoff:
+                    del this_image_dat_list[i]
+            print("Remaining stars ", len(this_image_dat_list))
+
+        if verbose:
+            save_img(this_image_dat_list, "this_image_dat_list.fits")
             
-        pooled_list.extend(tmp_list)  # extend with EPSFStar objects
+        all_dat_list.extend(this_image_dat_list)
         pixscales.append(_pixel_scale_arcsec(w))
     print("HERE2")
 
 
-    if len(pooled_list) == 0:
+    if len(all_dat_list) == 0:
         return {
             "status": "failed",
             "reason": "No usable star cutouts found across all images.",
@@ -404,7 +429,7 @@ def build_pooled_epsf(
 
     print("HERE1")
 
-    if len(pooled_list) < min_stars:
+    if len(all_dat_list) < min_stars:
         return {
             "status": "failed",
             "reason": f"Too few pooled star cutouts ({len(pooled_list)} < {min_stars}).",
@@ -413,28 +438,15 @@ def build_pooled_epsf(
 
     print("HERE")
 
-    pooled = EPSFStars(pooled_list)  # REQUIRED for EPSFBuilder
-
-    all_dat_list = []
-    all_mask_list = []
-    for i, s in enumerate(pooled.all_stars):
-        if np.any(~np.isfinite(s.data)):
-            print(f"Star #{i} has NaNs")
-        else:
-            all_dat_list.append(s.data)
-            all_mask_list.append(s.mask)
 
     all_dat_list = np.array(all_dat_list)
-    all_mask_list = np.array(all_mask_list)
     
-
     if verbose:
-        save_patches(all_dat_list, "all_dat_list.fits")
-        save_patches(all_mask_list, "all_mask_list.fits")
+        save_patches([np.nanmedian(item, axis = 0) for item in all_dat_list], "all_dat_list.fits")
+        save_patches_3d(all_dat_list, "all_dat_list.fits")
 
-    P, P2d = estimate_PSF_all_stars(all_dat_list, all_mask_list, verbose = verbose)
+    P, P2d = estimate_PSF_all_stars(all_dat_list, t_midpoints = t_midpoints, verbose = verbose)
 
-    P2d /= P2d[4::10, 4::10].sum()
     save_img(P2d, "PSF_10x_" + out_name.replace(".fits", "") + ".fits")
 
 
@@ -444,8 +456,11 @@ if __name__ == "__main__":
     assert len(ra_deg) > 10
 
     verbose = sys.argv[2]
-    chip_filter = sys.argv[3]
-    images = sys.argv[4:]
+    images = sys.argv[3:]
+
+    for image in images:
+        assert image.count("uncallin.fits") == 1
+        
 
     """
     for short_long in [0, 1]:
@@ -465,6 +480,5 @@ if __name__ == "__main__":
         oversampling=4,
         cutout_size=21,
         verbose = verbose,
-        out_name = chip_filter
     )
     
