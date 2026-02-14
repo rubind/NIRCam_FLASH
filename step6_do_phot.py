@@ -137,8 +137,8 @@ def do_phot(data_cube, psf_FN, read_noise, save_result = ""):
             
             uncs.append(
                 np.sqrt(
-                (   tmp_PSF**2. * data_cube_variance   ).sum() /
-                ((   tmp_PSF**2.  ).sum())**2.
+                np.nansum(   tmp_PSF**2. * data_cube_variance   ) /
+                (np.nansum(   tmp_PSF**2.  )**2.)
                 )
                 )
             
@@ -374,7 +374,7 @@ for istr in tqdm.tqdm(i_range):
                         "short_RMS:"] + list(short_RMSs) + [
                             "short_uncs:"] + list(short_uncs) + [long_filts[j], long_xy[0], long_xy[1], "long_phot:"] + list(long_phot) + [
                                 "long_RMS:"] + list(long_RMSs) + [
-                                    "long_uncs"] + list(long_uncs)
+                                    "long_uncs:"] + list(long_uncs)
                 
                 to_write = [str(item) for item in to_write]
 
