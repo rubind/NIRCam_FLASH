@@ -168,7 +168,7 @@ def renorm_P_PSF(P_PSF):
 
 
     
-def estimate_PSF_all_stars(all_dat_list, t_midpoints, verbose = False):
+def estimate_PSF_all_stars(all_dat_list, t_midpoints, PSF_rough_guess, verbose = False):
     
     passdata = dict(data = all_dat_list,
                     A = np.zeros(len(all_dat_list)) + 10000.,
@@ -182,7 +182,12 @@ def estimate_PSF_all_stars(all_dat_list, t_midpoints, verbose = False):
 
     X, Y = np.meshgrid(x1d, x1d)
 
-    P_PSF = np.exp(-0.1*(X**2. + Y**2.))
+    P_PSF = np.zeros([OVERSAMPLING*CUTOUT_SIZE]*2, dtype=np.float64)
+    
+    for i in range(len(OVERSAMPLING)):
+        for j in range(len(OVERSAMPLING)):
+            P_PSF[i::OVERSAMPLING, j::OVERSAMPLING] = PSF_rough_guess
+        
     P_PSF = np.reshape(P_PSF, (OVERSAMPLING*CUTOUT_SIZE)**2)
     P_PSF, P2d, ifn = renorm_P_PSF(P_PSF)
     
@@ -445,7 +450,7 @@ def build_pooled_epsf(
         save_patches([np.nanmedian(item, axis = 0) for item in all_dat_list], "all_dat_list.fits")
         save_patches_3d(all_dat_list, "all_dat_list.fits")
 
-    P, P2d = estimate_PSF_all_stars(all_dat_list, t_midpoints = t_midpoints, verbose = verbose)
+    P, P2d = estimate_PSF_all_stars(all_dat_list, t_midpoints = t_midpoints, PSF_rough_guess = PSF_rough_guess, verbose = verbose)
 
     save_img(P2d, "PSF_10x_" + out_name.replace(".fits", "") + ".fits")
 
