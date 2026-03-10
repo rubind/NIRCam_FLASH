@@ -110,7 +110,13 @@ def chi2fn_one_star(P, passdata):
     native_x -= np.mean(native_x)
 
     mod = P[0]*ifn(native_x - P[1], native_x - P[2]) + P[3]
+
+    #print("mod", mod.shape)
+    #print("dat", dat.shape)
+    
     resid = dat - mod
+    #print("resid", resid.shape)
+    
     resid = resid[np.where(1 - np.isnan(resid))]
 
     if np.abs(P[1]) > 5 or np.abs(P[2]) > 5:
@@ -181,12 +187,10 @@ def estimate_PSF_all_stars(all_dat_list, t_midpoints, PSF_rough_guess, verbose =
     x1d -= np.mean(x1d)
 
     X, Y = np.meshgrid(x1d, x1d)
-
-    P_PSF = np.zeros([OVERSAMPLING*CUTOUT_SIZE]*2, dtype=np.float64)
     
-    for i in range(len(OVERSAMPLING)):
-        for j in range(len(OVERSAMPLING)):
-            P_PSF[i::OVERSAMPLING, j::OVERSAMPLING] = PSF_rough_guess
+
+    P_PSF = np.exp(-0.1*(X**2. + Y**2.))
+    
         
     P_PSF = np.reshape(P_PSF, (OVERSAMPLING*CUTOUT_SIZE)**2)
     P_PSF, P2d, ifn = renorm_P_PSF(P_PSF)
@@ -202,7 +206,7 @@ def estimate_PSF_all_stars(all_dat_list, t_midpoints, PSF_rough_guess, verbose =
         save_patches_3d(the_mod, "the_mod_iter=%02i.fits" % 0)
         save_patches_3d(all_dat_list - the_mod, "the_resid_iter=%02i.fits" % 0)
 
-    
+
     
     last_PSF = P2d*1.
 
@@ -248,7 +252,7 @@ def _in_bounds(x, y, nx, ny, margin):
 def _background_2d(data, mask=None):
     ny, nx = data.shape
     if BKG_BOX_SIZE is None:
-        box = max(32, int(min(nx, ny) // 20))
+        box = max(32, int(min(nx, ny) // 64))
         if box % 2 == 0:
             box += 1
         box_size = (box, box)
@@ -304,6 +308,11 @@ def filter_close_pairs(x, y):
     y_clean = y[keep]
     return x_clean, y_clean
 
+def chi2_simple_ampl(P, passdata):
+    [med_dat, PSF_rough_guess] = passdata[0]
+
+    resid = med_dat - PSF_rough_guess*P[0]
+    return np.nansum(np.abs(resid))
 
 def build_pooled_epsf(
         image_paths,
@@ -374,7 +383,13 @@ def build_pooled_epsf(
         sci_diffs = np.reshape(sci_diffs, [sci_diffs.shape[0]*sci_diffs.shape[1], sci_diffs.shape[2], sci_diffs.shape[3]])
 
         median_diff = np.nanmedian(sci_diffs, axis = 0)
+        the_background = _background_2d(median_diff, mask = 1 - np.isnan(median_diff))
+
+        median_diff -= the_background
+        sci_diffs -= the_background
+        
         if verbose:
+            save_img(the_background, "the_background.fits")
             save_img(sci_diffs, "sci_diffs.fits")
             save_img(median_diff, "median_diff.fits")
 
@@ -393,18 +408,39 @@ def build_pooled_epsf(
                 save_img(PSF_rough_guess, "PSF_rough_guess_it=%i.fits" % rough_iter)
 
             flux_estimates = []
+            background_rel_NMADs = []
+            
             for i in range(len(this_image_dat_list)):
                 med_dat = np.nanmedian(this_image_dat_list[i], axis = 0)
                 assert len(med_dat) == cutout_size
 
                 med_dat -= np.nanmedian(med_dat)
-                flux_estimates.append(np.nansum(med_dat*PSF_rough_guess))
+
+                P, NA, NA = miniNM_new(ministart = [1.], miniscale = [0.5], chi2fn = chi2_simple_ampl, passdata = [med_dat, PSF_rough_guess], compute_Cmat = False)
+                flux_estimates.append(P[0])
+                background_pixels = med_dat[np.where(PSF_rough_guess < PSF_rough_guess*0.2)]
+                background_NMAD = 1.4826*np.nanmedian(np.abs(background_pixels - np.nanmedian(background_pixels)))
+                background_rel_NMADs.append(background_NMAD/flux_estimates[-1])
+                
 
             if rough_iter == 0:
                 stars_to_keep = KEEP_TOP_N_STARS*2
             else:
                 stars_to_keep = KEEP_TOP_N_STARS
-                
+
+            flux_estimates = np.array(flux_estimates)
+            print(background_rel_NMADs)
+            NMAD_background_rel_NMADs = 1.4826*np.nanmedian(np.abs(background_rel_NMADs - np.nanmedian(background_rel_NMADs)))
+
+            eliminated_stars = 0
+            
+            for i in range(len(flux_estimates)):
+                if np.abs(background_rel_NMADs[i]) > 5*NMAD_background_rel_NMADs:
+                    flux_estimates[i] = 0.
+                    eliminated_stars += 1
+
+            print("eliminated_stars", eliminated_stars, "out of", len(flux_estimates), "for structured backgrounds compared to flux of star")
+            
             flux_cutoff = np.sort(flux_estimates)[-stars_to_keep]
             print("flux_cutoff", flux_cutoff)
 

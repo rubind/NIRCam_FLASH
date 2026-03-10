@@ -35,8 +35,9 @@ for line in tqdm.tqdm(lines):
         short_start = parsed.index("short_phot:")
         short_end = parsed.index("short_RMS:")
 
+        n_frames = short_end - short_start - 1
+
         short_uncs_start = parsed.index("short_uncs:")
-        short_uncs_end = parsed.index("short_uncs:")
         
 
         long_start = parsed.index("long_phot:")
@@ -45,8 +46,8 @@ for line in tqdm.tqdm(lines):
         long_uncs_start = parsed.index("long_uncs:")
 
         
-        short_filt = parsed[short_start - 3]
-        long_filt = parsed[long_start - 3]
+        short_filt = parsed[short_start - 5]
+        long_filt = parsed[long_start - 5]
 
         if short_filt not in line_count:
             line_count[short_filt] = 0
@@ -57,7 +58,7 @@ for line in tqdm.tqdm(lines):
         for i in range(short_start+1, short_end):
             parsed[i] = str(float(parsed[i])/all_rel_sens_term[short_filt][line_count[short_filt]])
 
-        for i in range(short_uncs_start+1, short_uncs_end):
+        for i in range(short_uncs_start+1, short_uncs_start+1+n_frames):
             parsed[i] = str(float(parsed[i])/all_rel_sens_term[short_filt][line_count[short_filt]])
 
             
@@ -81,6 +82,6 @@ for key in line_count:
 
 
 
-f = open("photo_flattened.txt", 'w')
+f = open("photo_flattened_linear.txt", 'w')
 f.write('\n'.join(new_lines))
 f.close()
