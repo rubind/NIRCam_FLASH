@@ -57,7 +57,7 @@ def load_LCs():
 
     return ifn, dim1, dim2
 
-def fit_data(ts, ys_short, sigys_short, ys_long, sigys_long, start_t, const_F, prior_results, chi2_threshold = 24.5021, show_result = False):
+def fit_data(ts, ys_short, sigys_short, ys_long, sigys_long, start_t, const_F, prior_results, chi2_threshold = 24.5021):
     assert np.all(np.array(ts[:-1]) <= np.array(ts[1:])), str(ts)
     
     P, F, NA = miniNM_new(ministart = [0.5, 0.0, start_t, 1.], miniscale = [0.1, 1.0, 1., 0.1],
@@ -84,9 +84,7 @@ def fit_data(ts, ys_short, sigys_short, ys_long, sigys_long, start_t, const_F, p
         unc_ampl_long = 1./np.sqrt(np.nansum(weights_long*(best_mod - 1.)**2.))
 
         ampl_string = "ampl_short %.4f +- %.4f ampl_long %.4f +- %.4f" % (ampl_short, unc_ampl_short, ampl_long, unc_ampl_long)
-        
-        if show_result:
-            print("ampl_string", ampl_string)
+        print("ampl_string", ampl_string)
         
         if np.abs(ampl_short - ampl_long)/np.sqrt(unc_ampl_short**2. + unc_ampl_long**2.) < 2.5:
             # Good candidate!
@@ -231,7 +229,7 @@ ifn, dim1, dim2 = load_LCs()
 cand_to_read = sys.argv[1]
 file_to_read = sys.argv[2]
 short_filt = sys.argv[3]
-show_result = int(sys.argv[4])
+
 
 subprocess.getoutput("mkdir candidate_plots")
 
@@ -264,7 +262,7 @@ if 1:
     for this_start_t in all_data["ts"]:
         fit_results = fit_data(ts = all_data["ts"], start_t = this_start_t, const_F = const_F,
                                ys_short = all_data["ys_short"], sigys_short = all_data["sigys_short"],
-                               ys_long = all_data["ys_long"], sigys_long = all_data["sigys_long"], show_result = show_result, prior_results = prior_results)
+                               ys_long = all_data["ys_long"], sigys_long = all_data["sigys_long"], prior_results = prior_results)
 
         if fit_results[0] > 0:
             prior_results.append(fit_results)
