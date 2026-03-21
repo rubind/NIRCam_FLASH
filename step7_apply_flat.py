@@ -8,10 +8,12 @@ import tqdm
 fit_results = {}
 all_rel_sens_term = {}
 
-for fl in glob.glob("photo_unflat_*terms=S00+S01+S02+S03+S10*json"):
+for fl in glob.glob("*terms=S00+S01+S02+S03+S10*json"):
+    print("fl", fl)
     with open(fl) as f:
         parsed, rel_sens_term = json.load(f)
-    filt = fl.split("_")[2]
+    filt = fl.split("_")[1]
+    print("filt", filt)
     
     fit_results[filt] = parsed
     all_rel_sens_term[filt] = rel_sens_term

@@ -159,6 +159,9 @@ def read_data(phot_file, the_filt, min_flux):
     print("len(lines)", len(lines))
 
     all_data = dict(file_names = [], star_ids = [], xs = [], ys = [], phots = [])
+    # jw02729001001_02103_00001_nrca1_uncallin.fits:0 42675 84.67559442487747 -69.09434245895841 times 59732.93585596396 59732.93610450562 59732.93635304729 59732.93660158895 59732.93685013062 59732.937098672286 59732.937347213956 59732.93759575562 short_filt F090W 1920 125 0.12782874275499426 -0.3970284832298483 short_phot: 152306.0199830377 150466.43500187932 542606.2706632036 236334.27375341379 212080.35905619944 205343.62184735062 202917.46598281458 195538.86125442907 short_RMS: 0.08163929671212547 0.08345615947833676 1.0 1.0 1.0 1.0 1.0 1.0 short_uncs: 567.8273376732021 564.3262569780543 -1.031831911070209 -1.0286161952102475 -1.032009875792325 -1.0343184100768454 -1.028933625336535 -1.030080128043523 F335M 919 40 0.6054811398401565 -0.07892624559492395 long_phot: 40059.70805165472 41233.85534541359 40290.384811619675 41128.7155941244 41222.279680248655 41262.91974549036 40979.92289193649 41228.45538038781 long_RMS: 0.06746241813984886 0.0682877260981806 0.07104524531340808 0.07606528086040933 0.07366265018681913 0.07671533610407383 0.0816865383586041 0.08708138531034623 long_uncs: 284.1567623876938 286.5305291607755 284.0160399513766 286.2041381815019 284.17797734085156 284.69832614835826 284.6893634189089 281.988601121711
+
+    
     for line in tqdm.tqdm(lines):
         parsed = line.split(None)
         phot = parsed[parsed.index(short_or_long + "_phot:") + 1: parsed.index(short_or_long + "_RMS:")]
@@ -178,7 +181,7 @@ def read_data(phot_file, the_filt, min_flux):
                 del RMS[i]
                 
 
-        if (len(phot) > 3) and (min_flux > 0):
+        if (len(phot) > 3) and (min_flux > 0): # Just read in bright stars for fitting the model
             med_phot = np.median(phot)
             if med_phot > min_flux:
                 
@@ -189,7 +192,7 @@ def read_data(phot_file, the_filt, min_flux):
                 all_data["ys"].append(float(parsed[ind+2]))
                 
                 all_data["phots"].append(med_phot)
-        if min_flux <= 0: # Need all stars!
+        if min_flux <= 0: # If we need all stars, which we do when constructing the model!
             all_data["file_names"].append(parsed[0].split(":")[0])
             all_data["star_ids"].append(parsed[1])
             all_data["xs"].append(float(parsed[ind+1]))
