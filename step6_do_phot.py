@@ -154,7 +154,7 @@ def do_phot(data_cube, psf_FN, read_noise, save_result = ""):
                         psf_FN = psf_FN, data_cube = data_cube)
         save_patches(np.concatenate((data_cube, model, data_cube - model)), save_result)
         
-    return P[2:], RMSs, model, uncs
+    return P[2:], RMSs, model, uncs, P[0], P[1]
 
 
 def read_PSF(fl):
@@ -352,9 +352,9 @@ for istr in tqdm.tqdm(i_range):
                 long_PSF_key = long_filts[j]
 
                 
-                short_phot, short_RMSs, short_model, short_uncs = do_phot(short_cutout, psf_FNs[short_PSF_key], read_noise = short_read_noise_cutout)
+                short_phot, short_RMSs, short_model, short_uncs, cent_x_short, cent_y_short = do_phot(short_cutout, psf_FNs[short_PSF_key], read_noise = short_read_noise_cutout)
                 #, save_result = "short_" + fls[j].split(".")[0] + ".fits")
-                long_phot, long_RMSs, long_model, long_uncs = do_phot(long_cutout, psf_FNs[long_PSF_key], read_noise = long_read_noise_cutout)
+                long_phot, long_RMSs, long_model, long_uncs, cent_x_long, cent_y_long = do_phot(long_cutout, psf_FNs[long_PSF_key], read_noise = long_read_noise_cutout)
                 #, save_result = "long_" + fls[j].split(".")[0] + ".fits")
 
                 print("short_cutout", short_cutout.shape)
@@ -370,9 +370,9 @@ for istr in tqdm.tqdm(i_range):
                 this_im = np.concatenate(tuple([item.T for item in this_im]))
                 
                 to_write = [fls[j], i, ras[i], decs[i], "times"] + list(mjds[j][1:]) + [
-                    "short_filt", short_filts[j], short_xy[0], short_xy[1], "short_phot:"] + list(short_phot) + [
+                    "short_filt", short_filts[j], short_xy[0], short_xy[1], cent_x_short, cent_y_short, "short_phot:"] + list(short_phot) + [
                         "short_RMS:"] + list(short_RMSs) + [
-                            "short_uncs:"] + list(short_uncs) + [long_filts[j], long_xy[0], long_xy[1], "long_phot:"] + list(long_phot) + [
+                            "short_uncs:"] + list(short_uncs) + [long_filts[j], long_xy[0], long_xy[1], cent_x_long, cent_y_long, "long_phot:"] + list(long_phot) + [
                                 "long_RMS:"] + list(long_RMSs) + [
                                     "long_uncs:"] + list(long_uncs)
                 
