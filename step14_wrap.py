@@ -6,6 +6,8 @@ fl_to_read = sys.argv[2]
 
 assert fl_to_read.count("photo_flattened_linear.txt") == 1
 
+subprocess.getoutput("rm -f candidate_plots/*")
+
 
 f = open(fl_to_read, 'r')
 lines = f.read().split('\n')
