@@ -93,15 +93,23 @@ def fit_data(ts, ys_short, sigys_short, ys_long, sigys_long, start_t, const_F, p
             for prior_result in prior_results:
                 if (np.abs(prior_result[0] - F) < 0.2) and (np.abs(P[2] - prior_result[1]) < 0.5):
                     we_have_seen_before = 1
-                    
+
+
+            inds = np.where((best_mod - 1) > (np.max(best_mod) - 1)*0.05)
+            ts_in_range = ts[inds]
             
-            if we_have_seen_before == 0:
+            fraction_good_short = sum(all_data["sigys_short"][inds] > 0)/float(len(all_data["sigys_short"][inds]))
+            fraction_good_long = sum(all_data["sigys_long"][inds] > 0)/float(len(all_data["sigys_long"][inds]))
+
+            print("fraction_good_short", fraction_good_short)
+            print("fraction_good_long", fraction_good_long)
+            
+            if (we_have_seen_before == 0) and (fraction_good_short > 0.75) and (fraction_good_long > 0.75):
                 plt.figure(figsize = (12, 24))
                 for zoom in [0, 1, 2]:
                     plt.subplot(3,1,1+zoom)
 
-                    inds = np.where((best_mod - 1) > (np.max(best_mod) - 1)*0.05)
-                    ts_in_range = ts[inds]
+
                     
                 
                     plt.plot(ts, best_mod)
@@ -257,6 +265,7 @@ if 1:
 
     print("const_F", const_F)
     prior_results = [] # F, P[2] which is t_max
+
     
 
     for this_start_t in all_data["ts"]:
