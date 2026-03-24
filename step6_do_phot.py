@@ -152,7 +152,7 @@ def do_phot(data_cube, psf_FN, read_noise, save_result = ""):
                         n_samps = len(data_cube),
                         P = P,
                         psf_FN = psf_FN, data_cube = data_cube)
-        save_patches(np.concatenate((data_cube, model, data_cube - model)), save_result)
+        save_patches(np.concatenate((   data_cube, model, data_cube - model, psf_FN(xs_1d - P[0], xs_1d - P[1])   )), save_result)
         
     return P[2:], RMSs, model, uncs, P[0], P[1]
 
