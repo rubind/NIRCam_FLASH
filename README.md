@@ -7,3 +7,6 @@ python ~/NIRCam_ramp/step1--2_find_stars.py F150W_stacked_resample.fits (compute
 python ~/NIRCam_ramp/step5A_wrap.py (runs step5_nonlin.py once for each detector/filter, this will download the reference files without causing conflicts between jobs)
 
 python ~/NIRCam_ramp/step5B_wrap.py
+
+(check if all _uncallin.fits and _tweakreg.fits files got made)
+
