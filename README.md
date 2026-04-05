@@ -5,4 +5,5 @@ python ~/NIRCam_ramp/step1_resamp_all_ims.py (aligns images to Gaia, making _twe
 python ~/NIRCam_ramp/step1--2_find_stars.py F150W_stacked_resample.fits (computes approximate PSF, then correlation coefficient with that PSF over the image, no I don't know why the built in function for this has problems)
 
 python ~/NIRCam_ramp/step5A_wrap.py (runs step5_nonlin.py once for each detector/filter, this will download the reference files without causing conflicts between jobs)
+
 python ~/NIRCam_ramp/step5B_wrap.py
