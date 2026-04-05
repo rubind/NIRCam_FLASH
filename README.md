@@ -12,3 +12,5 @@ python ~/NIRCam_ramp/step5B_wrap.py
 
 (check if all _uncallin.fits and _tweakreg.fits files got made)
 
+python ~/NIRCam_ramp/step4B_PSF_wrap.py WD_candidates.ecsv
+
