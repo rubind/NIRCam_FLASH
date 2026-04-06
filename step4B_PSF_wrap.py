@@ -6,7 +6,7 @@ import tqdm
 
 
 
-fls = glob.glob("j*_tweakreg.fits")
+fls = glob.glob("j*_uncallin.fits")
 
 print(fls)
 
@@ -48,7 +48,7 @@ for chip_filter in set(chip_filters):
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
 
-python ~/NIRCam_ramp/PSF_builder_mine.py """ + sys.argv[1] + " 0 " + chip_filter + " " + " ".join(these_ims))
+python ~/NIRCam_ramp/PSF_builder_mine.py """ + sys.argv[1] + " 0  " + " ".join(these_ims))
     f.close()
 
     print(subprocess.getoutput("sbatch tmp.sh"))

@@ -12,7 +12,6 @@ from astropy.coordinates import SkyCoord
 import astropy.units as u
 import matplotlib.pyplot as plt
 
-from photutils.psf import extract_stars, EPSFBuilder, EPSFStars
 from photutils.background import Background2D, SExtractorBackground
 from scipy.interpolate import RectBivariateSpline
 from scipy.signal import convolve2d
@@ -21,6 +20,7 @@ from DavidsNM import miniNM_new, miniLM_new, save_img, save_patches
 from FileRead import readcol
 import glob
 import sys
+
 
 # ---------------------- user-tunable knobs ----------------------
 CUTOUT_SIZE        = 21         # pixels; safe for NIRCam wings
@@ -500,7 +500,7 @@ if __name__ == "__main__":
     images = sys.argv[3:]
 
     for image in images:
-        assert image.count("uncallin.fits") == 1
+        assert image.count("uncallin.fits") == 1, image
         
 
     """

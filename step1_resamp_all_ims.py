@@ -4,7 +4,7 @@ from astropy.io import fits
 import tqdm
 
 
-fls = glob.glob("j*_tweakreg.fits")
+fls = glob.glob("j*_cal.fits")
 
 #fls = [item for item in fls if item.count("long") == 0]
 

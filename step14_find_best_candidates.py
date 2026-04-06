@@ -142,7 +142,20 @@ def fit_data(ts, ys_short, sigys_short, ys_long, sigys_long, start_t, const_F, p
                             y_range = np.max(best_mod) - np.min(best_mod)
                             plt.ylim(np.min(best_mod) - y_range, np.max(best_mod) + y_range)
                 plt.title(sys.argv[1] + " " + sys.argv[2])
-                pltname = "cand=%s_filt=%s_dchi2=%.2f_tmax=%.2f_vel=%.2g_ampl=%.3f_%s.pdf" % (cand_to_read, short_filt, const_F - F, P[2], P[3], peak_ampl, ampl_string.replace(" ", "_"))
+
+                # ys_short, sigys_short, ys_long, sigys_long
+                chi2_short = np.nansum(  ((ys_short - best_mod)/sigys_short)**2.  )
+                chi2_long = np.nansum(  ((ys_long - best_mod)/sigys_long)**2.  )
+                DoF_short = np.sum(sigys_short > 0)
+                DoF_long = np.sum(sigys_long > 0)
+                NMAD_pull_short = NMAD(  (ys_short - best_mod)/sigys_short  )
+                NMAD_pull_long = NMAD(  (ys_long - best_mod)/sigys_long  )
+                
+                pltname = "cand=%s_filt=%s_dchi2=%.2f_chi2=%.1f_%.1f_dof=%.0f_%.0f_nmadpull=%.2f_%.2f_tmax=%.2f_vel=%.2g_ampl=%.3f_%s.pdf" % (cand_to_read, short_filt, const_F - F,
+                                                                                                                                              chi2_short, chi2_long,
+                                                                                                                                              DoF_short, DoF_long,
+                                                                                                                                              NMAD_pull_short, NMAD_pull_long,
+                                                                                                                                              P[2], P[3], peak_ampl, ampl_string.replace(" ", "_"))
                 plt.savefig("candidate_plots/" + pltname, bbox_inches = 'tight')
                 plt.close()
                 

@@ -11,15 +11,15 @@ f = fits.open(sys.argv[1])
 dat = f["SCI"].data*1.
 f.close()
 
-f = fits.open(sys.argv[2])
-dat2 = f["SCI"].data*1.
-f.close()
+#f = fits.open(sys.argv[2])
+#dat2 = f["SCI"].data*1.
+#f.close()
 
 NMAD = 1.4826*np.nanmedian(np.abs(dat - np.nanmedian(dat)))
 print("NMAD", NMAD)
 
-NMAD2 = 1.4826*np.nanmedian(np.abs(dat2 - np.nanmedian(dat2)))
-print("NMAD2", NMAD2)
+#NMAD2 = 1.4826*np.nanmedian(np.abs(dat2 - np.nanmedian(dat2)))
+#print("NMAD2", NMAD2)
 
 local_max = (
     (dat >= np.roll(dat, 1, 0)) &
@@ -50,9 +50,9 @@ for i in tqdm.trange(len(inds[0])):
     else:
         if np.isclose(cutout.max(), dat[ind_i, ind_j]):
             all_cutouts.append(cutout/cutout.max())
-            cutout = dat2[ind_i - 7:ind_i+8,
-                          ind_j - 7:ind_j+8]
-            all_cutouts2.append(cutout/cutout.max())
+            #cutout = dat2[ind_i - 7:ind_i+8,
+            #              ind_j - 7:ind_j+8]
+            #all_cutouts2.append(cutout/cutout.max())
 
 all_cutouts = np.array(all_cutouts)
 save_patches(all_cutouts, "all_cutouts.fits")

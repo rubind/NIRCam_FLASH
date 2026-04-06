@@ -45,8 +45,15 @@ def do_flat(ramp):
     #if not area_path or not os.path.exists(area_path):
     #    raise RuntimeError("CRDS could not provide an AREA (pixel-area) reference for this exposure.")
     step = FlatFieldStep()  # any Step works; use the one relevant to the ref
-    flat_ref = step.get_reference_file(ramp, 'flat')   # path or 'N/A'
-    area_ref = step.get_reference_file(ramp, 'area')   # path or 'N/A'
+
+
+    if EXP_TYPE.count("DARK") == 0:
+        flat_ref = step.get_reference_file(ramp, 'flat')   # path or 'N/A'
+        area_ref = step.get_reference_file(ramp, 'area')   # path or 'N/A'                                                                                     
+    else:
+        flat_ref = ""
+        area_ref = ""
+        
     readnoise_ref = step.get_reference_file(ramp, 'readnoise')
     gain_ref = step.get_reference_file(ramp, 'gain')   # 'gain' is the REFTYPE
 
@@ -59,13 +66,24 @@ def do_flat(ramp):
     median_eminus_per_ADU = np.nanmedian(gain_eminus_per_ADU)
 
     assert (median_eminus_per_ADU > 1)*(median_eminus_per_ADU < 4)
-    
-    flat = load_flat_image(flat_ref)         # dimensionless
-    area = load_area_image(area_ref)         # steradians per pixel
+
+        
     data = ramp.data.astype(np.float32)
     print("data", data.shape)
     nints, ng, ny, nx = data.shape
 
+
+    if flat_ref != "":
+        flat = load_flat_image(flat_ref)         # dimensionless
+    else:
+        flat = np.ones([ny, nx], dtype=np.float32)
+
+    if area_ref != "":
+        area = load_area_image(area_ref)         # steradians per pixel
+    else:
+        area = np.ones([ny, nx], dtype=np.float32)
+
+    
     if flat.shape != (ny, nx):
         raise RuntimeError(f"Flat shape {flat.shape} != image {(ny, nx)}")
     if area.shape != (ny, nx):
@@ -96,6 +114,13 @@ def do_flat(ramp):
 
 # Load your uncal ramp
 assert sys.argv[1].count("_uncal.fits") == 1
+
+f = fits.open(sys.argv[1])
+EXP_TYPE = f[0].header["EXP_TYPE"]
+f.close()
+
+print("EXP_TYPE", EXP_TYPE)
+
 ramp = RampModel(sys.argv[1])
 
 

@@ -6,7 +6,7 @@ output_file = sys.argv[1]
 these_fls = sys.argv[2:]
 
 
-"""
+
 TweakRegStep.call(
     these_fls,
     # Use an absolute reference catalog:
@@ -27,8 +27,8 @@ TweakRegStep.call(
     save_results=True
 )
 
-"""
+
+tweak_fls = [fl.replace("_cal.fits", "_tweakreg.fits") for fl in these_fls]
 
 
-
-ResampleStep.call(these_fls, output_file= output_file)
+ResampleStep.call(tweak_fls, output_file= output_file)

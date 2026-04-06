@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.table import Table
@@ -6,7 +7,7 @@ from scipy.ndimage import maximum_filter
 
 # --- Inputs you already have ---
 # 1. FITS file with the WCS of the original image
-img_fname = "F090W_stacked_resample.fits"
+img_fname = sys.argv[1] #  E.g., F150W_stacked_resample.fits
 
 # 2. Correlation image as a numpy array (same shape as original)
 hdu = fits.open("my_corr.fits")
