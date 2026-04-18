@@ -43,12 +43,14 @@ for chip_filter in set(chip_filters):
 #SBATCH --time=1-12:00:00 ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=2
-#SBATCH --mem=64G # Memory per node my job requires
+#SBATCH --mem=96G # Memory per node my job requires
 #SBATCH --error=example-%A.err # %A - filled with jobid, where to write the stderr
 #SBATCH --output=example-%A.out # %A - filled with jobid, wher to write the stdout
 source ~/.bash_profile
 
+source activate py39
 python ~/NIRCam_ramp/PSF_builder_mine.py """ + sys.argv[1] + " 0  " + " ".join(these_ims))
     f.close()
+    # source activate jwst doesn't work
 
     print(subprocess.getoutput("sbatch tmp.sh"))

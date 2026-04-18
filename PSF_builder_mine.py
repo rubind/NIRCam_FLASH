@@ -216,6 +216,10 @@ def estimate_PSF_all_stars(all_dat_list, t_midpoints, PSF_rough_guess, verbose =
         last_PSF = P2d*1.
         
         passdata = fit_ampl_x0y0sky(passdata, ifn)
+
+        print("Fitting...")
+        print("P_PSF", len(P_PSF.flatten()))
+        print("all_dat_list", all_dat_list.shape, len(all_dat_list.flatten()))
         
         P_PSF, NA, NA = miniLM_new(ministart = P_PSF,
                                    miniscale = np.ones((OVERSAMPLING*CUTOUT_SIZE)**2, dtype=np.float64),
@@ -383,7 +387,7 @@ def build_pooled_epsf(
         sci_diffs = np.reshape(sci_diffs, [sci_diffs.shape[0]*sci_diffs.shape[1], sci_diffs.shape[2], sci_diffs.shape[3]])
 
         median_diff = np.nanmedian(sci_diffs, axis = 0)
-        the_background = _background_2d(median_diff, mask = 1 - np.isnan(median_diff))
+        the_background = _background_2d(median_diff, mask = np.isnan(median_diff))
 
         median_diff -= the_background
         sci_diffs -= the_background
