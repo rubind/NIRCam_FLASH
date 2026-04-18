@@ -67,6 +67,8 @@ def get_10x_design_matrix():
         result_2d[:, -1] = 0.
         
         design_matrix[:, i] = np.reshape(result_2d, (CUTOUT_SIZE*10)**2)
+
+    design_matrix[np.where(np.abs(design_matrix) < 1e-8 * np.max(np.abs(design_matrix)))] = 0.
     return design_matrix
 
 print("Getting design matrix")
@@ -74,6 +76,8 @@ x1d_10x = np.arange(CUTOUT_SIZE*10, dtype=np.float64)/10.
 x1d_10x -= np.mean(x1d_10x)
 design_matrix = get_10x_design_matrix()
 #save_img(design_matrix, "design_matrix.fits")
+
+
 
 def modelfn_all_stars(P, passdata):
     P2d = np.reshape(np.dot(design_matrix, P), [CUTOUT_SIZE*10]*2)
