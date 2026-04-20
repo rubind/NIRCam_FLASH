@@ -14,4 +14,6 @@ python ~/NIRCam_ramp/step5B_wrap.py
 
 python ~/NIRCam_ramp/step4B_PSF_wrap.py WD_candidates.ecsv (submits 10 jobs, one for each chip)
 
+Modify step6_wrap.sh, which calls this:
 
+python /home/drubin/NIRCam_ramp/step6_wrap.py 0 15 500
