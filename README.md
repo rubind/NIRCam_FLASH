@@ -1,4 +1,6 @@
-Step 0: Download _uncal.fits and _cal.fits files.
+Step 0: Download _uncal.fits and _cal.fits files. 
+
+Check geometry: python ~/nic_python/plot_sci_footprints.py *nrcalong_cal.fits --out footprints_MAST_2026-03-31T03_54_35.506Z.png
 
 python ~/NIRCam_ramp/step1_resamp_all_ims.py (aligns images to Gaia, making _tweakreg.fits files then stacks each band, running more than one of the jobs at the same time may cause reference-file conflicts)
 
