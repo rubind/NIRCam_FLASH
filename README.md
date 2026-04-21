@@ -22,6 +22,8 @@ python /home/drubin/NIRCam_ramp/step6_wrap.py 0 15 500
 
 After running the photometry, concatenate to "photo_unflat.txt." Then:
 
+python ../NIRCam_ramp/step7_fix_linearity.py
+
 for NRCFILT in F150W F277W
 do
     python ../NIRCam_ramp/step7_make_flat.py photo_unflat.txt $NRCFILT 10000 0
