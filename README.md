@@ -19,3 +19,11 @@ python ~/NIRCam_ramp/step4B_PSF_wrap.py WD_candidates.ecsv (submits 10 jobs, one
 Modify step6_wrap.sh, which calls this:
 
 python /home/drubin/NIRCam_ramp/step6_wrap.py 0 15 500
+
+After running the photometry, concatenate to "photo_unflat.txt." Then:
+
+for NRCFILT in F150W F277W
+do
+    python make_flat.py photo_unflat.txt $NRCFILT 10000 0
+    python make_flat.py photo_unflat.txt $NRCFILT 10000 S4
+done
