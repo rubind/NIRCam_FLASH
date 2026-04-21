@@ -24,6 +24,6 @@ After running the photometry, concatenate to "photo_unflat.txt." Then:
 
 for NRCFILT in F150W F277W
 do
-    python make_flat.py photo_unflat.txt $NRCFILT 10000 0
-    python make_flat.py photo_unflat.txt $NRCFILT 10000 S4
+    python ../NIRCam_ramp/step7_make_flat.py photo_unflat.txt $NRCFILT 10000 0
+    python ../NIRCam_ramp/step7_make_flat.py photo_unflat.txt $NRCFILT 10000 S4
 done
