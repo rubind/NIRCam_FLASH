@@ -31,3 +31,5 @@ do
     python ../NIRCam_ramp/step7_make_flat.py photo_unflat.txt $NRCFILT 10000 0
     python ../NIRCam_ramp/step7_make_flat.py photo_unflat.txt $NRCFILT 10000 S4
 done
+
+python step14_wrap.py photo_flattened_linear.txt
