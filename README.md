@@ -28,8 +28,8 @@ python ../NIRCam_ramp/step7_fix_linearity.py
 
 for NRCFILT in F150W F277W
 do
-    python ../NIRCam_ramp/step7_make_flat.py photo_unflat.txt $NRCFILT 10000 0
-    python ../NIRCam_ramp/step7_make_flat.py photo_unflat.txt $NRCFILT 10000 S4
+    python ../NIRCam_ramp/step7_make_flat.py photo_unflat_linear.txt $NRCFILT 10000 0
+    python ../NIRCam_ramp/step7_make_flat.py photo_unflat_linear.txt $NRCFILT 10000 S4
 done
 
 python step14_wrap.py photo_flattened_linear.txt
