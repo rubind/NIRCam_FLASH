@@ -32,4 +32,6 @@ do
     python ../NIRCam_ramp/step7_make_flat.py photo_unflat_linear.txt $NRCFILT 10000 S4
 done
 
-python step14_wrap.py 600 photo_flattened_linear.txt
+Now fit light curves to find candidates:
+
+python step14_wrap.py 1200 photo_flattened_linear.txt
