@@ -68,7 +68,7 @@ def get_10x_design_matrix():
         
         design_matrix[:, i] = np.reshape(result_2d, (CUTOUT_SIZE*10)**2)
 
-    design_matrix[np.where(np.abs(design_matrix) < 1e-8 * np.max(np.abs(design_matrix)))] = 0.
+    design_matrix[np.where(np.abs(design_matrix) < 1e-6 * np.max(np.abs(design_matrix)))] = 0.
     return design_matrix
 
 print("Getting design matrix")

@@ -10,18 +10,19 @@ def qcount():
     return the_count
 
 
-use_model_PSF = sys.argv[1]
+use_model_PSF = int(sys.argv[1])
 n_jobs_per_fl = int(sys.argv[2])
 n_jobs_max = int(sys.argv[3])
 
+redo_old_jobs = int(sys.argv[4])
 
-print("Ready to remove old photometry")
-#input()
+if redo_old_jobs:
+    print("Ready to remove old photometry")
+    input()
+    print(subprocess.getoutput("rm -fv photo_subset_*"))
 
-print(subprocess.getoutput("rm -fv photo_subset_*"))
 
-
-wd_fl = glob.glob("WD*txt")[0]
+wd_fl = glob.glob("WD*csv")[0]
 
 f = open(wd_fl, 'r')
 lines = f.read().split('\n')
@@ -60,6 +61,8 @@ star_inds = np.arange(good_stars)
 star_inds = [str(item) for item in star_inds]
 
 
+existing_phot_files = glob.glob("photo_subset*txt")
+
 for fl in fls:
     for i in range(n_jobs_per_fl):
         f = open("tmp.sh", 'w')
@@ -76,8 +79,17 @@ source ~/.bash_profile
 
 cd """ + pwd + '\n')
 
+
+        #output_name = "photo_subset_" + sys.argv[1].split(".")[0] + "_" + short_wave_fl.split(".")[0] + "_" + use_model_PSF*"modelPSF" + (1 - use_model_PSF)*("empiricalPSF") + "_" + sys.argv[5] + "--" + sys.argv[-1] + ".txt"
+
+        sys_argv = [None, wd_fl, fl, 0, use_model_PSF, " ".join(star_inds[i::n_jobs_per_fl])]
         
-        f.write("python ~/NIRCam_ramp/step6_do_phot.py " + wd_fl + " " + fl + " 0 " + " " + use_model_PSF + " " + " ".join(star_inds[i::n_jobs_per_fl]) + '\n')
+        output_name = "photo_subset_" + sys_argv[1].split(".")[0] + "_" + sys_argv[2].split(".")[0] + "_" + sys_argv[4]*"modelPSF" + (1 - sys_argv[4])*("empiricalPSF") + "_" + sys_argv[5] + "--" + sys_argv[-1] + ".txt"
+
+        print("output_name", output_name)
+        
+        if existing_phot_files.count(output_name) == 0:
+            f.write("python ~/NIRCam_ramp/step6_do_phot.py " + " ".join([str(item) for item in sys_argv[1:]]) + '\n')
 
         f.close()
 

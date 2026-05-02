@@ -13,6 +13,11 @@ def NMAD(vals):
 def modelfn(P, ts):
     #P[0] is log10 radius ratio
     #P[1] is offset from center
+    #P[2] is time centroid
+    #P[3] is velocity
+    #P[4] is ampl_short
+    #P[5] is ampl_long
+    
     return np.array(
         [ifn(P[0], np.sqrt(
             ((t - P[2])*P[3])**2.
@@ -28,17 +33,28 @@ def chi2fn(P, passdata):
     ys_long = passdata[0][3]
     sigys_long = passdata[0][4]
 
-    mod = modelfn(P, ts)
-    
+    if P[4] < 0.5 or P[4] > 1.5:
+        return 1e100
 
-    chi2 = np.nansum(((ys_short - mod)/sigys_short)**2.) + np.nansum(((ys_long - mod)/sigys_long)**2.)
+    if P[5] < 0.5 or P[5] > 1.5:
+        return 1e100
+
+    if P[3] < 0:
+        return 1e100
+    
+    
+    mod = modelfn(P, ts)
+
+    
+    chi2 = np.nansum(((ys_short - mod*P[4])/sigys_short)**2.) + np.nansum(((ys_long - mod*P[5])/sigys_long)**2.)
     #print(P)
     
     return chi2
 
 
+
 def load_LCs():
-    f = fits.open("amplfication.fits")
+    f = fits.open("/home/drubin/NIRCam_ramp/amplfication.fits")
     print(f.info())
     dat = f[0].data
 
@@ -57,13 +73,21 @@ def load_LCs():
 
     return ifn, dim1, dim2
 
+
 def fit_data(ts, ys_short, sigys_short, ys_long, sigys_long, start_t, const_F, prior_results, chi2_threshold = 24.5021):
     assert np.all(np.array(ts[:-1]) <= np.array(ts[1:])), str(ts)
-    
-    P, F, NA = miniNM_new(ministart = [0.5, 0.0, start_t, 1.], miniscale = [0.1, 1.0, 1., 0.1],
-                          chi2fn = chi2fn, passdata = [ts, ys_short, sigys_short, ys_long, sigys_long], compute_Cmat = False, verbose = False)
+
+    passdata = [ts, ys_short, sigys_short, ys_long, sigys_long]
+    P, F, NA = miniNM_new(ministart = [0.5, 0.0, start_t, 1., 1., 1.], miniscale = [0.1, 1.0, 1., 0.1, 0.05, 0.05],
+                          chi2fn = chi2fn, passdata = passdata, compute_Cmat = False, verbose = False)
     best_mod = modelfn(P, ts)
 
+    ys_short_scaled = ys_short/P[4]
+    sigys_short_scaled = sigys_short/P[4]
+    ys_long_scaled = ys_long/P[5]
+    sigys_long = sigys_long/P[5]
+
+    
     if F < const_F - chi2_threshold:
         peak_ampl = np.max(best_mod)
         first_ampl = best_mod[0]
@@ -74,11 +98,11 @@ def fit_data(ts, ys_short, sigys_short, ys_long, sigys_long, start_t, const_F, p
 
         #if two_sigma_increase_from_end or double_amplification_from_end
 
-        weights_short = 1./sigys_short**2.
-        weights_long = 1./sigys_long**2.
+        weights_short = 1./sigys_short_scaled**2.
+        weights_long = 1./sigys_long_scaled**2.
         
-        ampl_short = np.nansum(weights_short*(ys_short - 1.)*(best_mod - 1.))/np.nansum(weights_short*(best_mod - 1.)**2.)
-        ampl_long = np.nansum(weights_long*(ys_long - 1.)*(best_mod - 1.))/np.nansum(weights_long*(best_mod - 1.)**2.)
+        ampl_short = np.nansum(weights_short*(ys_short_scaled - 1.)*(best_mod - 1.))/np.nansum(weights_short*(best_mod - 1.)**2.)
+        ampl_long = np.nansum(weights_long*(ys_long_scaled - 1.)*(best_mod - 1.))/np.nansum(weights_long*(best_mod - 1.)**2.)
 
         unc_ampl_short = 1./np.sqrt(np.nansum(weights_short*(best_mod - 1.)**2.))
         unc_ampl_long = 1./np.sqrt(np.nansum(weights_long*(best_mod - 1.)**2.))
@@ -113,6 +137,7 @@ def fit_data(ts, ys_short, sigys_short, ys_long, sigys_long, start_t, const_F, p
                     
                 
                     plt.plot(ts, best_mod)
+
                     xlim = (np.min(ts_in_range) - 5, np.max(ts_in_range) + 5)
                     
                     
@@ -132,8 +157,8 @@ def fit_data(ts, ys_short, sigys_short, ys_long, sigys_long, start_t, const_F, p
                             
                     plt.title("chi2 " + str(F) + " decrease " + str(const_F - F) + " best fit " + str(P) + "\n" + ampl_string)
                     
-                    plt.errorbar(ts, ys_short, yerr = sigys_short, fmt = '.', color = 'b')
-                    plt.errorbar(ts + 0.1, ys_long, yerr = sigys_long, fmt = '.', color = 'r')
+                    plt.errorbar(ts, ys_short_scaled, yerr = sigys_short_scaled, fmt = '.', color = 'b')
+                    plt.errorbar(ts + 0.1, ys_long_scaled, yerr = sigys_long_scaled, fmt = '.', color = 'r')
 
                     if zoom > 0:
                         plt.xlim(xlim)
@@ -144,12 +169,12 @@ def fit_data(ts, ys_short, sigys_short, ys_long, sigys_long, start_t, const_F, p
                 plt.title(sys.argv[1] + " " + sys.argv[2])
 
                 # ys_short, sigys_short, ys_long, sigys_long
-                chi2_short = np.nansum(  ((ys_short - best_mod)/sigys_short)**2.  )
-                chi2_long = np.nansum(  ((ys_long - best_mod)/sigys_long)**2.  )
+                chi2_short = np.nansum(  ((ys_short_scaled - best_mod)/sigys_short_scaled)**2.  )
+                chi2_long = np.nansum(  ((ys_long_scaled - best_mod)/sigys_long_scaled)**2.  )
                 DoF_short = np.sum(sigys_short > 0)
                 DoF_long = np.sum(sigys_long > 0)
-                NMAD_pull_short = NMAD(  (ys_short - best_mod)/sigys_short  )
-                NMAD_pull_long = NMAD(  (ys_long - best_mod)/sigys_long  )
+                NMAD_pull_short = NMAD(  (ys_short_scaled - best_mod)/sigys_short_scaled  )
+                NMAD_pull_long = NMAD(  (ys_long_scaled - best_mod)/sigys_long_scaled  )
                 
                 pltname = "cand=%s_filt=%s_dchi2=%.2f_chi2=%.1f_%.1f_dof=%.0f_%.0f_nmadpull=%.2f_%.2f_tmax=%.2f_vel=%.2g_ampl=%.3f_%s.pdf" % (cand_to_read, short_filt, const_F - F,
                                                                                                                                               chi2_short, chi2_long,
@@ -273,8 +298,17 @@ if 0:
              ys_short = ys + np.random.normal(size = len(ys))*sigys, sigys_short = sigys,
              ys_long = ys + np.random.normal(size = len(ys))*sigys*2, sigys_long = sigys*2)
 if 1:
+
+    weights_short = 1./all_data["sigys_short"]**2.
+    weights_long = 1./all_data["sigys_long"]**2.
+
+    mean_y_short = np.nansum(weights_short*all_data["ys_short"])/np.nansum(weights_short)
+    print("mean_y_short", mean_y_short)
     
-    const_F = np.nansum(   ((all_data["ys_short"] - 1.)/all_data["sigys_short"])**2.   ) + np.nansum(   ((all_data["ys_long"] - 1.)/all_data["sigys_long"])**2.   )
+    mean_y_long = np.nansum(weights_long*all_data["ys_long"])/np.nansum(weights_long)
+    print("mean_y_long", mean_y_long)
+    
+    const_F = np.nansum(   ((all_data["ys_short"] - mean_y_short)/all_data["sigys_short"])**2.   ) + np.nansum(   ((all_data["ys_long"] - mean_y_long)/all_data["sigys_long"])**2.   )
 
     print("const_F", const_F)
     prior_results = [] # F, P[2] which is t_max

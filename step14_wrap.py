@@ -53,7 +53,7 @@ source ~/.bash_profile
 cd """ + pwd + '\n')
 
     for this_cand_filt in cand_filt[i::n_jobs]:
-        f.write("python step14_find_best_candidates.py %s %s %s\n" % (this_cand_filt[0], sys.argv[2], this_cand_filt[1]))
+        f.write("python /home/drubin/NIRCam_ramp/step14_find_best_candidates.py %s %s %s\n" % (this_cand_filt[0], sys.argv[2], this_cand_filt[1]))
     f.close()
 
     print(subprocess.getoutput("sbatch tmp.sh"))
