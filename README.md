@@ -34,4 +34,4 @@ done
 
 Now fit light curves to find candidates:
 
-python step14_wrap.py 1200 photo_flattened_linear.txt
+python step14_wrap.py 400 photo_flattened_linear.txt
