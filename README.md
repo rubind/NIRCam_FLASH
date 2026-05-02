@@ -34,4 +34,9 @@ done
 
 Now fit light curves to find candidates:
 
-python step14_wrap.py 400 photo_flattened_linear.txt
+sbatch step14.sh which will do:
+
+cd /home/drubin/supernova_koastore/JWST_programs/MAST_2026-03-31T03_54_35.506Z/JWST
+
+python /home/drubin/NIRCam_ramp/step14_wrap.py 400 photo_flattened_linear.txt
+
