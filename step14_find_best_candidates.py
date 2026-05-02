@@ -85,7 +85,7 @@ def fit_data(ts, ys_short, sigys_short, ys_long, sigys_long, start_t, const_F, p
     ys_short_scaled = ys_short/P[4]
     sigys_short_scaled = sigys_short/P[4]
     ys_long_scaled = ys_long/P[5]
-    sigys_long = sigys_long/P[5]
+    sigys_long_scaled = sigys_long/P[5]
 
     
     if F < const_F - chi2_threshold:

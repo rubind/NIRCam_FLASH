@@ -1,8 +1,10 @@
 import subprocess
 import sys
+import time
 
-n_jobs = int(sys.argv[1])
+n_jobs_max = int(sys.argv[1])
 fl_to_read = sys.argv[2]
+n_jobs = 2000
 
 assert fl_to_read.count("photo_flattened_linear.txt") == 1
 
@@ -38,6 +40,9 @@ print(len(cand_filt), "unique")
 for i in range(n_jobs):
     print("i", i, n_jobs)
 
+    while int(subprocess.getoutput("squeue | grep drubin | wc").split(None)[0]) > n_jobs_max:
+        time.sleep(200)
+        
     f = open("tmp.sh", 'w')
     f.write("""#!/bin/bash
 #SBATCH --job-name=phot
