@@ -53,7 +53,7 @@ def xmatch_nearest_within_radius(
 my = pd.read_csv("star_fluxes.txt", sep=r"\s+")
 print(my)
 #hst = pd.read_csv("hlsp_http_hst_acs-wfc3_tarantula_multi_v2.0_cat.txt", sep=r"\s+")
-hst_tab = Table.read("some_catalog.fits", hdu=1)
+hst_tab = Table.read("", hdu=1)
 hst = hst_tab.to_pandas()
 
 
