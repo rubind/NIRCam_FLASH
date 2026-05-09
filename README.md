@@ -42,4 +42,8 @@ python /home/drubin/NIRCam_ramp/step14_wrap.py 400 photo_flattened_linear.txt
 
 Fitting star radii:
 
+Construct median JWST fluxes and flux uncertainties for all stars:
+
+python step8_star_fluxes.py (reads photo_flattened_linear.txt)
+
 If the model-atmosphere grid needs updating, need to download r=500 grid from https://archive.stsci.edu/hlsp/bosz
