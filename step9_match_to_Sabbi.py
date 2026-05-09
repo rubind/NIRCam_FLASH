@@ -52,12 +52,17 @@ def xmatch_nearest_within_radius(
 # --- Example usage ---
 my = pd.read_csv("star_fluxes.txt", sep=r"\s+")
 print(my)
-hst = pd.read_csv("hlsp_http_hst_acs-wfc3_tarantula_multi_v2.0_cat.txt", sep=r"\s+")
-print(hst)
-out, RA_offset, Dec_offset = xmatch_nearest_within_radius(my, hst, ra1="RA", dec1="Dec", ra2="RA", dec2="Dec", radius_arcsec=0.2)
+#hst = pd.read_csv("hlsp_http_hst_acs-wfc3_tarantula_multi_v2.0_cat.txt", sep=r"\s+")
+hst_tab = Table.read("some_catalog.fits", hdu=1)
+hst = hst_tab.to_pandas()
 
-hst["RA"] += RA_offset
-hst["Dec"] += Dec_offset
+
+
+print(hst)
+out, RA_offset, Dec_offset = xmatch_nearest_within_radius(my, hst, ra1="RA", dec1="Dec", ra2="ra", dec2="dec", radius_arcsec=0.25)
+
+hst["ra"] += RA_offset
+hst["dec"] += Dec_offset
 
 out, NA, NA = xmatch_nearest_within_radius(my, hst, ra1="RA", dec1="Dec", ra2="RA", dec2="Dec", radius_arcsec=0.1)
 out.to_csv("my_with_hst.csv", index=False)

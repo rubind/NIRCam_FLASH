@@ -3,6 +3,7 @@ import numpy as np
 import json
 import sys
 import tqdm
+import matplotlib.pyplot as plt
 
 
 fit_results = {}
@@ -12,12 +13,14 @@ for fl in glob.glob("*terms=S00+S01+S02+S03+S10*json"):
     print("fl", fl)
     with open(fl) as f:
         parsed, rel_sens_term = json.load(f)
-    filt = fl.split("_")[1]
+    filt = fl.split("_")[3]
     print("filt", filt)
     
     fit_results[filt] = parsed
     all_rel_sens_term[filt] = rel_sens_term
 
+print("all_rel_sens_term", all_rel_sens_term.keys())
+    
 f = open(sys.argv[1], 'r')
 lines = f.read().split('\n')
 f.close()
@@ -29,11 +32,17 @@ new_lines = []
 
 line_count = dict()
 
+
+chip_filts = {}
+
+
 for line in tqdm.tqdm(lines):
     if line.count("short_phot:") == 0:
         new_lines.append(line)
     else:
         parsed = line.split(None)
+        short_chip = parsed[0].split("_")[-2]
+        long_chip = short_chip[:-1] + "long"
         short_start = parsed.index("short_phot:")
         short_end = parsed.index("short_RMS:")
 
@@ -51,25 +60,48 @@ for line in tqdm.tqdm(lines):
         short_filt = parsed[short_start - 5]
         long_filt = parsed[long_start - 5]
 
+        short_xy = (int(parsed[short_start - 4]), int(parsed[short_start - 3]))
+        long_xy = (int(parsed[long_start - 4]), int(parsed[long_start - 3]))
+                
+
+        short_chip_filt = short_chip + "_" + short_filt
+        long_chip_filt = long_chip + "_" + long_filt
+
+
+        
+        if short_chip_filt not in chip_filts:
+            chip_filts[short_chip_filt] = []
+        
+        if long_chip_filt not in chip_filts:    
+            chip_filts[long_chip_filt] = []
+            
+            
+            
         if short_filt not in line_count:
             line_count[short_filt] = 0
 
         if long_filt not in line_count:
             line_count[long_filt] = 0
+
+
         
         for i in range(short_start+1, short_end):
             parsed[i] = str(float(parsed[i])/all_rel_sens_term[short_filt][line_count[short_filt]])
-
+            
         for i in range(short_uncs_start+1, short_uncs_start+1+n_frames):
             parsed[i] = str(float(parsed[i])/all_rel_sens_term[short_filt][line_count[short_filt]])
 
-            
+        chip_filts[short_chip_filt].append((short_xy[0], short_xy[1], all_rel_sens_term[short_filt][line_count[short_filt]]))
+                                           
         for i in range(long_start+1, long_end):
             parsed[i] = str(float(parsed[i])/all_rel_sens_term[long_filt][line_count[long_filt]])
 
         for i in range(long_uncs_start+1, len(parsed)):
             parsed[i] = str(float(parsed[i])/all_rel_sens_term[long_filt][line_count[long_filt]])
-
+                                           
+        chip_filts[long_chip_filt].append((long_xy[0], long_xy[1], all_rel_sens_term[long_filt][line_count[long_filt]]))
+                                           
+                                           
         new_lines.append(" ".join(parsed))
 
         line_count[short_filt] += 1
@@ -81,6 +113,20 @@ print(line_count)
 for key in line_count:
     assert line_count[key] == len(all_rel_sens_term[key])
     
+
+sqrt_n = int(np.ceil(np.sqrt(len(list(chip_filts.keys())))))
+
+plt.figure(figsize = (5*sqrt_n, 5*sqrt_n))
+for i, key in enumerate(chip_filts):
+    plt.subplot(sqrt_n, sqrt_n, i+1)
+    plt.title(key)
+    plt.scatter([item[0] for item in chip_filts[key]],
+                [item[1] for item in chip_filts[key]],
+                c = [item[2] for item in chip_filts[key]])
+    plt.colorbar()
+
+plt.savefig("applied_flat.png", bbox_inches = 'tight')
+plt.close()
 
 
 

@@ -199,6 +199,10 @@ def read_data(phot_file, the_filt, min_flux):
             all_data["ys"].append(float(parsed[ind+2]))
 
 
+    #if (min_flux > 0): # Just read in bright stars that have been observed more than once for fitting the model
+    #    print("unique stars so far", len(set(all_data["star_ids"])))
+        
+            
     if short_or_long == "short":
         all_data["detectors"] = [item.split("_")[3] for item in all_data["file_names"]]
     else:
@@ -271,13 +275,14 @@ def read_data(phot_file, the_filt, min_flux):
                     term_name = "S" + str(i) + str(j)
 
                     all_data["term_" + term_name] = ifn(x01, y01, grid=False)
+                    #all_data["term_" + term_name][np.where(np.abs(all_data["term_" + term_name]) < 1e-4)] = 0
                     terms.append(term_name)
                     if min_flux > 0:
                         plt.subplot(grid_size, grid_size, i*grid_size + j + 1)
                         plt.scatter(x01, y01, c = all_data["term_" + term_name])
         plt.savefig("spline_coeffs.pdf", bbox_inches = 'tight')
         plt.close()
-    
+
     return all_data, terms
 
 scatter_size = 3
