@@ -46,6 +46,8 @@ Construct median JWST fluxes and flux uncertainties for all stars:
 
 python step8_star_fluxes.py (reads photo_flattened_linear.txt, writes star_fluxes.txt)
 
+python step9_match_to_Sabbi.py (reads PHAT_catalogs/v3/merged_catalog.fits for M31)
+
 If the model-atmosphere grid needs updating, need to download r=500 grid from https://archive.stsci.edu/hlsp/bosz
 Do not download 10's of thousands of files!
 
