@@ -47,3 +47,8 @@ Construct median JWST fluxes and flux uncertainties for all stars:
 python step8_star_fluxes.py (reads photo_flattened_linear.txt, writes star_fluxes.txt)
 
 If the model-atmosphere grid needs updating, need to download r=500 grid from https://archive.stsci.edu/hlsp/bosz
+Do not download 10's of thousands of files!
+
+grep 'm+0.00_a+0.00_c+0.00_v2' hlsp_bosz_bosz2024_sim_r500_m+0.00_v1_bulkdl.sh
+
+
