@@ -57,5 +57,6 @@ Then "gunzip *"
 
 python step11_model_atm.py
 
+python get_AB_abs.py makes absolute AB magnitudes for Vega. This enables catalog Vega mags (from HST) to be converted to absolute AB magnitudes.
 
 
