@@ -4,6 +4,8 @@ from DavidsNM import miniNM_new
 from scipy.interpolate import LinearNDInterpolator
 from FileRead import readcol
 import matplotlib.pyplot as plt
+import sys
+import extinction
 
 def modelfn(P):
     #try:
@@ -27,10 +29,10 @@ def modelfn(P):
         ifns["F200W"](Teff1000, logg),
         ifns["F335M"](Teff1000, logg),
         ifns["F444W"](Teff1000, logg)])
-    mags = mags_1solR - 2.5*np.log10(r_rsol**2.) + 18.477
+    mags = mags_1solR - 2.5*np.log10(r_rsol**2.) + dist_mod
 
     
-    mags += P[3]*
+    mags += P[3]*A_lambda
     return mags
 
 
@@ -63,7 +65,7 @@ def run_fit(miniscale, passdata, fit_extinction):
     bestP = np.sqrt([-1., -1., -1., -1.])
     
     for start_Teff1000 in [3., 5., 10., 20.]:
-        P, F, Cmat = miniNM_new(ministart = [start_Teff1000, 1.0, 4.0, 0.3*fit_extinction, 18.477],
+        P, F, Cmat = miniNM_new(ministart = [start_Teff1000, 1.0, 4.0, 0.3*fit_extinction],
                                 miniscale = miniscale,
                                 chi2fn = chi2fn,
                                 passdata = passdata,
@@ -128,13 +130,7 @@ def fit_one_star(one_row):
     return return_dict
 
 def load_model_atm():
-    [atm_fl, all_Lsol_one_Rsol, F090W_one_Rsol, F200W_one_Rsol, F335M_one_Rsol, F444W_one_Rsol, GaiaG_one_Rsol, F555W_one_Rsol, F336W_one_Rsol, F110W_one_Rsol, F775W_one_Rsol, F160W_one_Rsol, F275W_one_Rsol] = readcol("model_atmosphere_grid.txt", 'a,f,fffff,ffffff')
-
-    atm_fl = np.array(atm_fl)
-
-    good_mask = np.where(np.array([item.count("m-0.50_a+0.00_c+0.00") for item in atm_fl]))
-    [atm_fl, all_Lsol_one_Rsol, F090W_one_Rsol, F200W_one_Rsol, F335M_one_Rsol, F444W_one_Rsol, GaiaG_one_Rsol, F555W_one_Rsol, F336W_one_Rsol, F110W_one_Rsol, F775W_one_Rsol, F160W_one_Rsol, F275W_one_Rsol] = [item[good_mask] for item in [atm_fl, all_Lsol_one_Rsol, F090W_one_Rsol, F200W_one_Rsol, F335M_one_Rsol, F444W_one_Rsol, GaiaG_one_Rsol, F555W_one_Rsol, F336W_one_Rsol, F110W_one_Rsol, F775W_one_Rsol, F160W_one_Rsol, F275W_one_Rsol]]
-
+    [atm_fl, all_Lsol_one_Rsol, F090W_one_Rsol, F200W_one_Rsol, F335M_one_Rsol, F444W_one_Rsol, GaiaG_one_Rsol, F555W_one_Rsol, F336W_one_Rsol, F110W_one_Rsol, F775W_one_Rsol, F160W_one_Rsol, F275W_one_Rsol] = readcol(model_atmosphere_grid, 'a,f,fffff,ffffff')
 
     
     Teff1000 = [float(item.split("_t")[-1].split("_")[0])/1000. for item in atm_fl]
@@ -159,6 +155,23 @@ def load_model_atm():
         ifns[filt] = LinearNDInterpolator(list(zip(Teff1000, logg)), idata, fill_value=np.nan)
 
     return ifns
+
+model_atmosphere_grid = sys.argv[1]
+
+HST_filt_list =     ["F275W",                "F336W",            "F475W", "F814W", "F110W",            "F160W"]
+# If Vega were at 10 parsecs, it would have these AB magnitudes. Absolute AB mags.
+HST_Vega_10pc_AB = [1.5118909390959674, 1.1481593147969968,                   0.7767685103427203, 1.2742877498247838]
+
+JWST_filt_list = ["F150W", "F277W"]
+JWST_AB_ZPs = [27.8139, 27.8803]
+
+A_lambda = exinction([2750., 3360., 4750., 8140., 11000., 16000.] + [15000., 27500.])
+
+print("A_lambda", A_lambda)
+
+
+dist_mod = 24.407 # 24.407 for M 31
+
 
 ifns = load_model_atm()
 
