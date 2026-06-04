@@ -3,6 +3,8 @@ import pandas as pd
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 import matplotlib.pyplot as plt
+from astropy.table import Table
+
 
 def xmatch_nearest_within_radius(
     cat1: pd.DataFrame,
@@ -42,8 +44,8 @@ def xmatch_nearest_within_radius(
 
     out = pd.concat([out.reset_index(drop=True), add.reset_index(drop=True)], axis=1)
 
-    RA_offset = np.nanmedian(  (out["RA"] - out["RA_hst"])  )
-    Dec_offset = np.nanmedian(  (out["Dec"] - out["Dec_hst"])  )
+    RA_offset = np.nanmedian(  (out["RA"] - out[ra2 + "_hst"])  )
+    Dec_offset = np.nanmedian(  (out["Dec"] - out[dec2 + "_hst"])  )
 
     print("RA_offset", RA_offset*3600.)
     print("Dec_offset", Dec_offset*3600.)
@@ -53,7 +55,7 @@ def xmatch_nearest_within_radius(
 my = pd.read_csv("star_fluxes.txt", sep=r"\s+")
 print(my)
 #hst = pd.read_csv("hlsp_http_hst_acs-wfc3_tarantula_multi_v2.0_cat.txt", sep=r"\s+")
-hst_tab = Table.read("", hdu=1)
+hst_tab = Table.read("../../PHAT_catalogs/v3/merged_catalog.fits", hdu=1)
 hst = hst_tab.to_pandas()
 
 
@@ -64,6 +66,6 @@ out, RA_offset, Dec_offset = xmatch_nearest_within_radius(my, hst, ra1="RA", dec
 hst["ra"] += RA_offset
 hst["dec"] += Dec_offset
 
-out, NA, NA = xmatch_nearest_within_radius(my, hst, ra1="RA", dec1="Dec", ra2="RA", dec2="Dec", radius_arcsec=0.1)
+out, NA, NA = xmatch_nearest_within_radius(my, hst, ra1="RA", dec1="Dec", ra2="ra", dec2="dec", radius_arcsec=0.1)
 out.to_csv("my_with_hst.csv", index=False)
 

@@ -22,13 +22,15 @@ assert np.all(np.abs(np.log(waves[1:]/waves[:-1]) - log_step) < 1e-3*log_step)
 
 dwaves = waves*log_step
 
-all_fls = np.sort(glob.glob("/home/drubin/koa_scratch/r500/m-0.50/bosz2024*txt"))
+all_fls = np.sort(glob.glob("/home/drubin/koa_scratch/r500/m+0.00/bosz2024*txt"))
 all_Lsol_one_Rsol = []
 
 
 filt_interp = {}
 
-for filt in ["F090W_May2024_mean_system_throughput.txt", "F200W_May2024_mean_system_throughput.txt", "F335M_May2024_mean_system_throughput.txt", "F444W_May2024_mean_system_throughput.txt"]:
+for filt in ["F090W_May2024_mean_system_throughput.txt", "F150W_May2024_mean_system_throughput.txt", "F200W_May2024_mean_system_throughput.txt",
+             "F277W_May2024_mean_system_throughput.txt", "F335M_May2024_mean_system_throughput.txt", "F444W_May2024_mean_system_throughput.txt"]:
+
     filt_interp[filt.split("_")[0]] = file_to_fn("filters/" + filt, kind = 'linear', fill_value = 0., bounds_error = False)(waves/10000.)
 
 filt_interp["GaiaG"] = file_to_fn("filters/passband.dat", kind = 'linear', fill_value = 0., bounds_error = False)(waves/10.)
