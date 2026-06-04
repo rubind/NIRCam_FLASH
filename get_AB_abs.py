@@ -15,9 +15,9 @@ distance_pc = float(sys.argv[2])
 
 lambs = np.arange(2000., 50000.)
 
-sed = file_to_fn(sed_fl, kind = 'linear')(lambs)
+sed = file_to_fn(sed_fl, kind = 'linear', fill_value = 0., bounds_error = False)(lambs)
 
-for fl in np.sort(glob.glob("nircam_throughputs/mean_throughputs/F*W_May*txt") + ["nircam_throughputs/mean_throughputs/F335M_May2024_mean_system_throughput.txt"] + glob.glob("nircam_throughputs/HST*dat")):
+for fl in np.sort(glob.glob("../nircam_throughputs/mean_throughputs/F*W_May*txt") + ["../nircam_throughputs/mean_throughputs/F335M_May2024_mean_system_throughput.txt"] + glob.glob("../nircam_throughputs/*dat")):
     [x, y] = readcol(fl, 'ff')
 
     if fl.count("HST") == 0:

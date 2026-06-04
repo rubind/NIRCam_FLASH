@@ -5,26 +5,30 @@ import matplotlib.pyplot as plt
 from scipy.stats import scoreatpercentile
 import subprocess
 import tqdm
+import sys
 
 df = pd.read_csv("my_with_hst_fit.csv")
 inds = np.where((df["chi2_SED_fit"] < 200))
 
+blue_filt = sys.argv[1]
+red_filt = sys.argv[2]
+
 print(df)
 
 log_R = np.log10(np.abs(np.array(df["r_rsol"])[inds]))
-log_frac_unc_090 = np.log10(np.array(df["F090W_unc"]/df["F090W"])[inds])
-log_frac_unc_200 = np.log10(np.array(df["F200W_unc"]/df["F200W"])[inds])
+log_frac_unc_blue = np.log10(np.array(df[blue_filt + "_unc"]*np.sqrt(df[blue_filt + "_count"])/df[blue_filt])[inds])
+log_frac_unc_red = np.log10(np.array(df[red_filt + "_unc"]*np.sqrt(df[blue_filt + "_count"])/df[red_filt])[inds])
 
 bin_edges_log_R = np.linspace(np.nanmin(log_R), np.nanmax(log_R), int(10*(np.nanmax(log_R) - np.nanmin(log_R))) + 1)
-bin_edges_log_frac_unc_090 = np.linspace(np.nanmin(log_frac_unc_090), 0.0, int(10*(0.0 - np.nanmin(log_frac_unc_090))) + 1)
-bin_edges_log_frac_unc_200 = np.linspace(np.nanmin(log_frac_unc_200), 0.0, int(10*(0.0 - np.nanmin(log_frac_unc_200))) + 1)
+bin_edges_log_frac_unc_blue = np.linspace(np.nanmin(log_frac_unc_blue), 0.0, int(10*(0.0 - np.nanmin(log_frac_unc_blue))) + 1)
+bin_edges_log_frac_unc_red = np.linspace(np.nanmin(log_frac_unc_red), 0.0, int(10*(0.0 - np.nanmin(log_frac_unc_red))) + 1)
 
 print("bin_edges_log_R", bin_edges_log_R)
-print("bin_edges_log_frac_unc_090", bin_edges_log_frac_unc_090)
-print("bin_edges_log_frac_unc_200", bin_edges_log_frac_unc_200)
+print("bin_edges_log_frac_unc_blue", bin_edges_log_frac_unc_blue)
+print("bin_edges_log_frac_unc_red", bin_edges_log_frac_unc_red)
 
-bin_edges_log_frac_unc = dict(F090W = bin_edges_log_frac_unc_090, F200W = bin_edges_log_frac_unc_200)
-log_frac_unc = dict(F090W = log_frac_unc_090, F200W = log_frac_unc_200)
+bin_edges_log_frac_unc = dict(blue_filt = bin_edges_log_frac_unc_blue, red_filt = bin_edges_log_frac_unc_red)
+log_frac_unc = dict(blue_filt = log_frac_unc_blue, red_filt = log_frac_unc_red)
 
 
 tot_star_hours = 0
@@ -44,7 +48,7 @@ for log10_mass in log10_masses:
 
 pwd = subprocess.getoutput("pwd")
 
-for filt_name in ["F090W", "F200W"]:
+for filt_name in [blue_filt, red_filt]:
     for i in tqdm.trange(len(bin_edges_log_frac_unc[filt_name]) - 1):
         for j in range(len(bin_edges_log_R) - 1):
             inds = np.where((log_frac_unc[filt_name] >= bin_edges_log_frac_unc[filt_name][i])*(log_frac_unc[filt_name] < bin_edges_log_frac_unc[filt_name][i+1])
