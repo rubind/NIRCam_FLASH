@@ -59,4 +59,7 @@ python step11_model_atm.py
 
 python get_AB_abs.py makes absolute AB magnitudes for Vega. This enables catalog Vega mags (from HST) to be converted to absolute AB magnitudes.
 
+Once radii are fit (my_with_hst_fit.csv has been created):
+
+python ~/NIRCam_ramp/step11_get_bins.py F150W F277W M31
 
