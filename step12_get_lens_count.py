@@ -26,12 +26,22 @@ c = 299792458.0
 Msun = 1.98847e30
 kpc = 3.085677581e19
 
-# LMC line-of-sight (approx)
-LMC_l = np.deg2rad(280.0)
-LMC_b = np.deg2rad(-33.0)
-
 R0 = 8.2 * kpc
-DS_DEFAULT = 50.0 * kpc
+target = sys.argv[5]
+
+if target == "LMC":
+    # LMC line-of-sight (approx)
+    LMC_l = np.deg2rad(280.0)
+    LMC_b = np.deg2rad(-33.0)
+    DS_DEFAULT = 50.0 * kpc
+elif target == "M31":
+    LMC_l = np.deg2rad(121.17) # Not LMC
+    LMC_b = np.deg2rad(-21.57)
+    DS_DEFAULT = 765.0 * kpc
+else:
+    assert 0, "Unknown target " + target
+
+
 
 # ----------------------------
 # Data model
@@ -481,6 +491,7 @@ if __name__ == "__main__":
     star_hours = float(sys.argv[2])
     one_sigma_phot = float(sys.argv[3])
     BH_mass = float(sys.argv[4])
+
     
     times_s = np.arange(0, star_hours * 3600, 10.737*2)
 
