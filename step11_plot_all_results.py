@@ -36,7 +36,7 @@ for x_key, y_key in [("r_rsol", "chi2_SED_fit"),
 
         
     inds = np.where((df["chi2_SED_fit"] < 200))
-    plt.plot(  np.abs(np.array(df[x_key])[inds]), np.array(df[y_key])[inds], '.', color = 'b', alpha = 0.1)
+    plt.plot(  np.abs(np.array(df[x_key])[inds]), np.array(df[y_key])[inds], '.', color = 'b', alpha = 0.1, rasterized = True)
     plt.title("chi2 < 200")
     plt.xlabel(x_key)
     plt.ylabel(y_key)
@@ -49,14 +49,15 @@ for x_key, y_key in [("r_rsol", "chi2_SED_fit"),
         
 
 
-plt.subplot(sqrtn, sqrtn, ind)
-ind += 1
-
-
-inds = np.where((df["chi2_SED_fit"] < 200)*(np.abs(np.array(df["r_rsol"])) < 10))
-plt.hist(np.abs(np.array(df["r_rsol"])[inds]), bins = 100, color = 'b')
-plt.title("chi2 < 200, R < 10, count: %i" % len(inds[0]))
-plt.xlabel("R/Rsol")
+for max_radius in [10, 20]:
+    plt.subplot(sqrtn, sqrtn, ind)
+    ind += 1
+    
+    
+    inds = np.where((df["chi2_SED_fit"] < 200)*(np.abs(np.array(df["r_rsol"])) < max_radius))
+    plt.hist(np.abs(np.array(df["r_rsol"])[inds]), bins = 100, color = 'b')
+    plt.title("chi2 < 200, R < %.1f, count: %i" % (max_radius, len(inds[0])))
+    plt.xlabel("R/Rsol")
 
 
 plt.subplot(sqrtn, sqrtn, ind)
@@ -66,6 +67,9 @@ inds = np.where((df["chi2_SED_fit"] < 200))
 plt.hist(np.abs(np.array(df[filts[0].upper()])[inds]), bins = 100, color = 'b')
 plt.title("chi2 < 200")
 plt.xlabel(filts[0].upper())
+
+
+
 
 for filt in filts:
     plt.subplot(sqrtn, sqrtn, ind)
@@ -83,7 +87,7 @@ for filt in filts:
     
     plt.plot(np.array(df["mod_" + filt])[inds],
              obs_mag - np.array(df["mod_" + filt])[inds],
-             '.', color = 'b')
+             '.', color = 'b', rasterized = True)
 
     
     plt.title(filt + " " + str(ZP) + " 1s: " + str(ZP - 2.5*np.log10(10.737*2)))
@@ -102,7 +106,8 @@ plt.subplot(sqrtn, sqrtn, ind)
 ind += 1
 inds = np.where((df["chi2_SED_fit"] < 200))
 
-plt.plot(np.array(df["r_rsol"])[inds], (2.5/np.log(10.))*np.array(df[filts[0].upper()  + "_unc"]/df[filts[0].upper()])[inds], '.', color = 'b')
+plt.plot(np.array(df["r_rsol"])[inds], (2.5/np.log(10.))*np.array(df[filts[0].upper()  + "_unc"]/df[filts[0].upper()])[inds], '.',
+         color = 'b', rasterized = True)
 plt.xlabel("r_rsol")
 plt.ylabel("$%s$ Magnitude Unc" % filts[0].upper())
 plt.xscale('log')
