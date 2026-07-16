@@ -176,11 +176,13 @@ def fit_data(ts, ys_short, sigys_short, ys_long, sigys_long, start_t, const_F, p
                 NMAD_pull_short = NMAD(  (ys_short_scaled - best_mod)/sigys_short_scaled  )
                 NMAD_pull_long = NMAD(  (ys_long_scaled - best_mod)/sigys_long_scaled  )
                 
-                pltname = "cand=%s_filt=%s_dchi2=%.2f_chi2=%.1f_%.1f_dof=%.0f_%.0f_nmadpull=%.2f_%.2f_tmax=%.2f_vel=%.2g_ampl=%.3f_%s.pdf" % (cand_to_read, short_filt, const_F - F,
-                                                                                                                                              chi2_short, chi2_long,
-                                                                                                                                              DoF_short, DoF_long,
-                                                                                                                                              NMAD_pull_short, NMAD_pull_long,
-                                                                                                                                              P[2], P[3], peak_ampl, ampl_string.replace(" ", "_"))
+                pltname = "cand=%s_filt=%s_dchi2=%.2f_chi2=%.1f_%.1f_dof=%.0f_%.0f_nmadpull=%.2f_%.2f_tmax=%.2f_vel=%.2g_dynrange=%.3f_%s.pdf" % (cand_to_read, short_filt, const_F - F,
+                                                                                                                                                  chi2_short, chi2_long,
+                                                                                                                                                  DoF_short, DoF_long,
+                                                                                                                                                  NMAD_pull_short, NMAD_pull_long,
+                                                                                                                                                  P[2], P[3], #peak_ampl,
+                                                                                                                                                  (best_mod.max() - best_mod.min())/best_mod.min(),
+                                                                                                                                                  ampl_string.replace(" ", "_"))
                 plt.savefig("candidate_plots/" + pltname, bbox_inches = 'tight')
                 plt.close()
                 
