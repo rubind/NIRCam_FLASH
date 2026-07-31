@@ -27,7 +27,7 @@ inds = np.where((df["chi2_SED_fit"] < 200)*(df["F150W_count"] > 1)*(df["mod_f814
 
 log_R = np.log10(np.abs(np.array(df["r_rsol"])[inds]))
 r_band = 0.5*(np.array(df["mod_f475w"])[inds] + np.array(df["mod_f814w"])[inds])
-HSC_depth = 22.5
+HSC_depth = float(sys.argv[3])
 
 HSC_flux_ZP_equal_depth = 10.**(-0.4*(r_band - HSC_depth))
 
@@ -93,13 +93,13 @@ source ~/.bash_profile
                 f.write("echo 'star_hours %f'\n" % star_hours)
                 f.write("echo 'filt_name %s'\n" % filt_name)
                 f.write("echo 'log10_mass %f'\n" % log10_mass)
-                f.write("python /home/drubin/NIRCam_ramp/step12_get_lens_count.py "  + str(10**median_log_R) + " " + str(star_hours) + " " + str(10**median_log_unc) + (" %.3g" % (10**log10_mass)) + " " + target + '\n')
+                f.write("python /home/drubin/NIRCam_ramp/step12_get_lens_count.py "  + str(10**median_log_R) + " " + str(star_hours*20) + " " + str(10**median_log_unc) + (" %.3g" % (10**log10_mass)) + " " + target + ' 360. \n')
                 jobs_by_filt[filt_name] += 1
 
             f.write("echo 'done'\n")
             f.close()
             print(subprocess.getoutput("cd monte_carlo_results\n sbatch tmp.sh"))
-
+            print("NOTE: STAR HOURS MULTIPLIED BY 20")
 
 f = open("jobs.txt", 'w')
 f.write(str(jobs_by_filt))

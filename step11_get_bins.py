@@ -44,7 +44,7 @@ plt_y = []
 plt_c = []
 
 #log10_masses = np.linspace(-11, -9, 21)
-log10_masses = np.arange(-11, -6 + 0.01, 0.1)
+log10_masses = np.arange(-11, -5 + 0.01, 0.1)
 
 print("log10_masses", log10_masses)
 
@@ -95,7 +95,7 @@ source ~/.bash_profile
                     f.write("echo 'star_hours %f'\n" % star_hours)
                     f.write("echo 'filt_name %s'\n" % filt_name)
                     f.write("echo 'log10_mass %f'\n" % log10_mass)
-                    f.write("python /home/drubin/NIRCam_ramp/step12_get_lens_count.py "  + str(10**median_log_R) + " " + str(star_hours) + " " + str(10**median_log_unc) + (" %.3g" % (10**log10_mass)) + " " + target + '\n')
+                    f.write("python /home/drubin/NIRCam_ramp/step12_get_lens_count.py "  + str(10**median_log_R) + " " + str(star_hours) + " " + str(10**median_log_unc) + (" %.3g" % (10**log10_mass)) + " " + target + ' 10.737*2 \n')
                     jobs_by_filt[filt_name] += 1
                 
                 if median_log_unc < -2.:

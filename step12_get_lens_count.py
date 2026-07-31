@@ -491,9 +491,9 @@ if __name__ == "__main__":
     star_hours = float(sys.argv[2])
     one_sigma_phot = float(sys.argv[3])
     BH_mass = float(sys.argv[4])
-
+    cadence = eval(sys.argv[6])
     
-    times_s = np.arange(0, star_hours * 3600, 10.737*2)
+    times_s = np.arange(0, star_hours * 3600, cadence)
 
     stars = [
         Star(m_short=22.1, m_long=21.9, R_star_m=star_radius_rsol * 6.957e8, times_s=times_s, name="LMC-1"),
