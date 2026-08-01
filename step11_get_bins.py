@@ -44,7 +44,7 @@ plt_y = []
 plt_c = []
 
 #log10_masses = np.linspace(-11, -9, 21)
-log10_masses = np.arange(-11, -5 + 0.01, 0.1)
+log10_masses = np.arange(-11, -0 + 0.01, 0.1)
 
 print("log10_masses", log10_masses)
 
@@ -62,15 +62,21 @@ for filt_name in [blue_filt, red_filt]:
                             *(log_R >= bin_edges_log_R[j])*(log_R < bin_edges_log_R[j+1])
                             )
 
-            counts = sum(np.array(df[filt_name + "_count"])[inds])
+            mean_counts_per_star = np.mean(np.array(df[filt_name + "_count"])[inds])
+            number_of_stars = len(np.array(df[filt_name + "_count"])[inds])
 
             
-            if counts > 2:
+            if mean_counts_per_star > 2:
+                print("mean_counts_per_star", mean_counts_per_star)
+                print("number_of_stars", number_of_stars)
+
+
+                
                 f = open("monte_carlo_results/tmp.sh", 'w')
                 f.write("""#!/bin/bash
 #SBATCH --job-name=mc
 #SBATCH --partition=shared,kill-shared
-#SBATCH --time=0-10:00:00 ## time format is DD-HH:MM:SS
+#SBATCH --time=0-12:00:00 ## time format is DD-HH:MM:SS
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=8G # Memory per node my job requires
@@ -81,25 +87,26 @@ source ~/.bash_profile
                 
                 median_log_R = np.median(log_R[inds])
                 median_log_unc = np.median(log_frac_unc[filt_name][inds])
-                star_hours = counts*10.737*2./3600.
+                mean_hours = mean_counts_per_star*10.737*2./3600.
                 
-                print("filt_name", filt_name, "median_log_R", median_log_R, "median_log_unc", median_log_unc, "star_hours", star_hours)
+                print("filt_name", filt_name, "median_log_R", median_log_R, "median_log_unc", median_log_unc, "mean_hours", mean_hours)
 
                 plt_x.append(median_log_R)
                 plt_y.append(median_log_unc)
-                plt_c.append(star_hours)
+                plt_c.append(mean_hours)
 
                 for log10_mass in log10_masses:
                     f.write("cd " + pwd + "/monte_carlo_results/\n")
                     f.write("echo 'median_log_R %f'\n" % median_log_R)
-                    f.write("echo 'star_hours %f'\n" % star_hours)
+                    f.write("echo 'mean_hours %f'\n" % mean_hours)
+                    f.write("echo 'number_of_stars %.1f'\n" % number_of_stars)
                     f.write("echo 'filt_name %s'\n" % filt_name)
                     f.write("echo 'log10_mass %f'\n" % log10_mass)
-                    f.write("python /home/drubin/NIRCam_ramp/step12_get_lens_count.py "  + str(10**median_log_R) + " " + str(star_hours) + " " + str(10**median_log_unc) + (" %.3g" % (10**log10_mass)) + " " + target + ' 10.737*2 \n')
+                    f.write("python /home/drubin/NIRCam_ramp/step12_get_lens_count.py "  + str(10**median_log_R) + " " + str(mean_hours) + " " + str(10**median_log_unc) + (" %.3g" % (10**log10_mass)) + " " + target + ' 10.737*2 \n')
                     jobs_by_filt[filt_name] += 1
                 
                 if median_log_unc < -2.:
-                    tot_star_hours += star_hours
+                    tot_star_hours += number_of_stars*mean_hours
                 f.write("echo 'done'\n")
                 f.close()
                 print(subprocess.getoutput("cd monte_carlo_results\n sbatch tmp.sh"))
