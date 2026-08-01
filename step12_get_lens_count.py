@@ -9,7 +9,8 @@ Clean, fast pipeline:
 Notes:
 - Uses finite-source parameter rho = (R_* * x) / R_E  (projected source to lens plane).
 - NFW normalized to local density rho_local_GeV_cm3 (GeV/c^2 per cm^3).
-- Efficiency MC uses interval overlap with cadence, no lightcurve synthesis.
+- Efficiency MC tests the sampled magnification range without synthesizing the
+  full light curve at every cadence point.
 """
 
 from __future__ import annotations
@@ -336,7 +337,12 @@ def simulate_star_mc_fast_eff(
     record_pairs: bool = True,
 ) -> Dict[str, Any]:
     """
-    Returns efficiency only (dimensionless), plus optional (A_peak, x) for detected hits.
+    Returns efficiency (dimensionless), plus optional (A_peak, x) for detected
+    hits.
+
+    Detection is based on the sampled dynamic range A_max/A_min >= Ath, not on
+    an absolute magnification measurement.  Event peaks remain restricted to
+    the observing window, preserving lambda=rate*T_obs*epsilon.
     """
     t_sorted = np.asarray(star.times_s, dtype=float)
     if t_sorted.ndim != 1 or len(t_sorted) < 2:
@@ -390,16 +396,48 @@ def simulate_star_mc_fast_eff(
     # same observing baseline used later in lambda = rate * T_obs * epsilon.
     t0 = np.random.uniform(t_sorted[0], t_sorted[-1], size=N)
 
-    hits = any_hit_interval(t_sorted, t0, dt) & feasible
+    # A dynamic-range detection necessarily has at least one sampled point
+    # above the absolute Ath threshold, so this inexpensive interval test is a
+    # useful prefilter before evaluating finite-source magnifications.
+    candidates = any_hit_interval(t_sorted, t0, dt) & feasible
+    hits = np.zeros(N, dtype=bool)
 
-    # NEW: enforce true peak magnification threshold
-    if np.any(hits):
-        A_peak = np.array([A_finite(float(u), float(r)) for u, r in zip(u0[hits], rho[hits])], dtype=float)
-        keep = A_peak >= cfg.Ath
-        # shrink hits to those truly above threshold
-        hit_idx = np.where(hits)[0]
-        hits[:] = False
-        hits[hit_idx[keep]] = True
+    if np.any(candidates):
+        candidate_idx = np.where(candidates)[0]
+        t0_candidate = t0[candidate_idx]
+
+        # For the symmetric, monotonically decreasing microlensing light curve,
+        # the largest sampled A is at the cadence point nearest the peak and the
+        # smallest sampled A is at the endpoint farthest from the peak.
+        insertion = np.searchsorted(t_sorted, t0_candidate)
+        left_idx = np.clip(insertion - 1, 0, len(t_sorted) - 1)
+        right_idx = np.clip(insertion, 0, len(t_sorted) - 1)
+        dt_left = np.abs(t0_candidate - t_sorted[left_idx])
+        dt_right = np.abs(t0_candidate - t_sorted[right_idx])
+        dt_near = np.minimum(dt_left, dt_right)
+        dt_far = np.maximum(
+            np.abs(t0_candidate - t_sorted[0]),
+            np.abs(t0_candidate - t_sorted[-1]),
+        )
+
+        u_near = np.sqrt(
+            u0[candidate_idx] ** 2
+            + (dt_near / np.maximum(tE[candidate_idx], 1e-30)) ** 2
+        )
+        u_far = np.sqrt(
+            u0[candidate_idx] ** 2
+            + (dt_far / np.maximum(tE[candidate_idx], 1e-30)) ** 2
+        )
+        A_near = np.array(
+            [A_finite(float(u), float(r)) for u, r in zip(u_near, rho[candidate_idx])],
+            dtype=float,
+        )
+        A_far = np.array(
+            [A_finite(float(u), float(r)) for u, r in zip(u_far, rho[candidate_idx])],
+            dtype=float,
+        )
+        dynamic_range = A_near / np.maximum(A_far, 1.0)
+        hits[candidate_idx[dynamic_range >= cfg.Ath]] = True
 
     n_hits = int(np.count_nonzero(hits))
 
