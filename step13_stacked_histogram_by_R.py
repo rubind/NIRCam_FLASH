@@ -40,10 +40,11 @@ def parse_args():
 
 
 def read_expected_events(input_file, target_filter):
-    # values[population][(log10_mass, median_log_R)] = summed N_exp
+    # values[population][(log10_mass, median_log_R)] = star-weighted N_exp
     values = {population: defaultdict(float) for population in POPULATIONS}
 
     current_median_log_R = None
+    current_number_of_stars = None
     current_filt_name = None
     current_log10_mass = None
 
@@ -55,8 +56,17 @@ def read_expected_events(input_file, target_filter):
 
             if line.startswith("median_log_R"):
                 current_median_log_R = float(line.split(maxsplit=1)[1])
+                current_number_of_stars = None
                 current_filt_name = None
                 current_log10_mass = None
+                continue
+
+            if line.startswith("number_of_stars"):
+                current_number_of_stars = float(line.split(maxsplit=1)[1])
+                if current_number_of_stars < 0.0:
+                    raise ValueError(
+                        f"Negative number_of_stars on line {line_number}"
+                    )
                 continue
 
             if line.startswith("filt_name"):
@@ -73,6 +83,7 @@ def read_expected_events(input_file, target_filter):
 
             if (
                 current_median_log_R is None
+                or current_number_of_stars is None
                 or current_filt_name is None
                 or current_log10_mass is None
             ):
@@ -83,9 +94,11 @@ def read_expected_events(input_file, target_filter):
 
             if current_filt_name == target_filter:
                 population = match.group(1)
-                n_exp = float(match.group(2))
+                n_exp_per_star = float(match.group(2))
                 key = (current_log10_mass, current_median_log_R)
-                values[population][key] += n_exp
+                values[population][key] += (
+                    n_exp_per_star * current_number_of_stars
+                )
 
     if not any(values[population] for population in POPULATIONS):
         raise ValueError(f"No entries found for filt_name = {target_filter}")
@@ -158,7 +171,10 @@ def plot_expected_events(values, target_filter, populations, output_file):
 
         axis.set_title(population)
         axis.set_xlabel(r"$\log_{10}(M_{\mathrm{PBH}}/M_{\odot})$")
+        axis.set_xlim(-11.0, -5.0)
         axis.set_ylim(bottom=0.0)
+        default_ymax = axis.get_ylim()[1]
+        axis.set_ylim(0.0, 1.05 * default_ymax)
         axis.ticklabel_format(axis="y", style="sci", scilimits=(-2, 2))
 
     axes[0].set_ylabel("Expected Number of Detectable Lensing Events")

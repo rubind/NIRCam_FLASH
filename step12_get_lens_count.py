@@ -99,7 +99,7 @@ class M31NFWModel:
     """M31-centered NFW halo along a line of sight through projected offset b_proj_m."""
     r_s_m: float = 25.0 * kpc
     rho_s_Msun_kpc3: float = 4.96e6
-    D_center_m: float = 780.0 * kpc
+    D_center_m: float = 760.0 * kpc
     b_proj_m: float = 0.0
 
     def __post_init__(self):
@@ -697,7 +697,7 @@ def histogram_amplifications(
 # ----------------------------
 M31_l = np.deg2rad(121.17)
 M31_b = np.deg2rad(-21.57)
-DS_M31 = 780.0 * kpc
+DS_M31 = 760.0 * kpc
 
 if __name__ == "__main__":
     # Example: 3 stars, 400 hours, 20s cadence (as you used)
