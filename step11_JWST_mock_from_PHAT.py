@@ -31,18 +31,18 @@ inds = np.where((df["chi2_SED_fit"] < 200)*(df["mod_f160w"] > 0))
 
 
 
-log_R = np.log10(np.abs(np.array(df["r_rsol"])[inds]))
+log10_R = np.log10(np.abs(np.array(df["r_rsol"])[inds]))
 r_band = np.array(df["mod_f160w"])[inds]
 
 HSC_flux_ZP_equal_depth = 10.**(-0.4*(r_band - HSC_depth))
 
-log_frac_unc = np.log10(0.2/HSC_flux_ZP_equal_depth)
+log10_frac_unc = np.log10(0.2/HSC_flux_ZP_equal_depth)
 
-bin_edges_log_R = np.linspace(np.nanmin(log_R), np.nanmax(log_R), int(10*(np.nanmax(log_R) - np.nanmin(log_R))) + 1)
-bin_edges_log_frac_unc = np.linspace(np.nanmin(log_frac_unc), 0.0, int(10*(0.0 - np.nanmin(log_frac_unc))) + 1)
+bin_edges_log10_R = np.linspace(np.nanmin(log10_R), np.nanmax(log10_R), int(10*(np.nanmax(log10_R) - np.nanmin(log10_R))) + 1)
+bin_edges_log10_frac_unc = np.linspace(np.nanmin(log10_frac_unc), 0.0, int(10*(0.0 - np.nanmin(log10_frac_unc))) + 1)
 
-print("bin_edges_log_R", bin_edges_log_R)
-print("bin_edges_log_frac_unc", bin_edges_log_frac_unc)
+print("bin_edges_log10_R", bin_edges_log10_R)
+print("bin_edges_log10_frac_unc", bin_edges_log10_frac_unc)
 
 
 tot_star_hours = 0
@@ -62,13 +62,13 @@ pwd = subprocess.getoutput("pwd")
 
 jobs_by_filt = {filt_name: 0}
 
-for i in tqdm.trange(len(bin_edges_log_frac_unc) - 1):
-    for j in range(len(bin_edges_log_R) - 1):
-        inds = np.where((log_frac_unc >= bin_edges_log_frac_unc[i])*(log_frac_unc < bin_edges_log_frac_unc[i+1])
-                        *(log_R >= bin_edges_log_R[j])*(log_R < bin_edges_log_R[j+1])
+for i in tqdm.trange(len(bin_edges_log10_frac_unc) - 1):
+    for j in range(len(bin_edges_log10_R) - 1):
+        inds = np.where((log10_frac_unc >= bin_edges_log10_frac_unc[i])*(log10_frac_unc < bin_edges_log10_frac_unc[i+1])
+                        *(log10_R >= bin_edges_log10_R[j])*(log10_R < bin_edges_log10_R[j+1])
                         )
 
-        star_hours = len(log_frac_unc[inds])*hours
+        star_hours = len(log10_frac_unc[inds])*hours
 
         if star_hours > 0:
             f = open("monte_carlo_results/tmp.sh", 'w')
@@ -84,20 +84,20 @@ for i in tqdm.trange(len(bin_edges_log_frac_unc) - 1):
 source ~/.bash_profile
 """)
 
-            median_log_R = np.median(log_R[inds])
-            median_log_unc = np.median(log_frac_unc[inds])
-            assert len(log_frac_unc[inds]) == len(log_frac_unc[inds])
+            median_log10_R = np.median(log10_R[inds])
+            median_log10_unc = np.median(log10_frac_unc[inds])
+            assert len(log10_frac_unc[inds]) == len(log10_frac_unc[inds])
         
-            print("filt_name", filt_name, "median_log_R", median_log_R, "median_log_unc", median_log_unc, "star_hours", star_hours)
+            print("filt_name", filt_name, "median_log10_R", median_log10_R, "median_log10_unc", median_log10_unc, "star_hours", star_hours)
         
             
             for log10_mass in log10_masses:
                 f.write("cd " + pwd + "/monte_carlo_results/\n")
-                f.write("echo 'median_log_R %f'\n" % median_log_R)
+                f.write("echo 'median_log_R %f'\n" % median_log10_R)
                 f.write("echo 'star_hours %f'\n" % star_hours)
                 f.write("echo 'filt_name %s'\n" % filt_name)
                 f.write("echo 'log10_mass %f'\n" % log10_mass)
-                f.write("python /home/drubin/NIRCam_ramp/step12_get_lens_count.py "  + str(10**median_log_R) + " " + str(star_hours) + " " + str(10**median_log_unc) + (" %.3g" % (10**log10_mass)) + " " + target + " " + str(cadence) + ' \n')
+                f.write("python /home/drubin/NIRCam_ramp/step12_get_lens_count.py "  + str(10**median_log10_R) + " " + str(star_hours) + " " + str(10**median_log10_unc) + (" %.3g" % (10**log10_mass)) + " " + target + " " + str(cadence) + ' \n')
                 jobs_by_filt[filt_name] += 1
 
             f.write("echo 'done'\n")
