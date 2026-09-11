@@ -26,8 +26,11 @@ for key in ["chi2_SED_fit", "r_rsol", "mod_f475w", "mod_f814w", "mod_f160w", "f1
 
 print("mod_f160w - f160w_vega_hst median", np.nanmedian(df["mod_f160w"] - df["f160w_vega_hst"]))
 
+saturation_AB = 29.2843 - 2.5*np.log10(5e5/200)
 
-inds = np.where((df["chi2_SED_fit"] < 200)*(df["mod_f160w"] > 0))
+print("saturation_AB", saturation_AB)
+
+inds = np.where((df["chi2_SED_fit"] < 200)*(df["mod_f160w"] > saturation_AB))
 
 
 
@@ -36,7 +39,17 @@ r_band = np.array(df["mod_f160w"])[inds]
 
 HSC_flux_ZP_equal_depth = 10.**(-0.4*(r_band - HSC_depth))
 
-log10_frac_unc = np.log10(0.2/HSC_flux_ZP_equal_depth)
+electrons_per_group = 10.**(-0.4*(r_band - 29.2843))*cadence
+
+fractional_noise = np.sqrt((0.2/HSC_flux_ZP_equal_depth)**2. + 1./electrons_per_group)
+
+log10_frac_unc = np.log10(fractional_noise)
+
+plt.plot(r_band[::100], fractional_noise[::100], '.')
+plt.yscale('log')
+plt.savefig("fractional_noise_vs_mag.pdf", bbox_inches = 'tight')
+plt.close()
+
 
 bin_edges_log10_R = np.linspace(np.nanmin(log10_R), np.nanmax(log10_R), int(10*(np.nanmax(log10_R) - np.nanmin(log10_R))) + 1)
 bin_edges_log10_frac_unc = np.linspace(np.nanmin(log10_frac_unc), 0.0, int(10*(0.0 - np.nanmin(log10_frac_unc))) + 1)
@@ -51,7 +64,7 @@ plt_y = []
 plt_c = []
 
 #log10_masses = np.linspace(-11, -9, 21)
-log10_masses = np.arange(-11, -6 + 0.01, 0.1)
+log10_masses = np.arange(-12., -6 + 0.01, 0.1)
 
 print("log10_masses", log10_masses)
 
