@@ -45,6 +45,10 @@ print("bin_edges_log10_R", bin_edges_log10_R)
 print("bin_edges_log10_frac_unc", bin_edges_log10_frac_unc)
 
 
+assert len(r_band) == len(log10_R)
+assert len(r_band) == len(log10_frac_unc)
+
+
 tot_star_hours = 0
 plt_x = []
 plt_y = []
@@ -68,9 +72,10 @@ for i in tqdm.trange(len(bin_edges_log10_frac_unc) - 1):
                         *(log10_R >= bin_edges_log10_R[j])*(log10_R < bin_edges_log10_R[j+1])
                         )
 
-        star_hours = len(log10_frac_unc[inds])*hours
+        number_of_stars = len(log10_frac_unc[inds])
+        mean_hours = hours
 
-        if star_hours > 0:
+        if number_of_stars > 0 and mean_hours > 0:
             f = open("monte_carlo_results/tmp.sh", 'w')
             f.write("""#!/bin/bash
 #SBATCH --job-name=mc
@@ -88,16 +93,17 @@ source ~/.bash_profile
             median_log10_unc = np.median(log10_frac_unc[inds])
             assert len(log10_frac_unc[inds]) == len(log10_frac_unc[inds])
         
-            print("filt_name", filt_name, "median_log10_R", median_log10_R, "median_log10_unc", median_log10_unc, "star_hours", star_hours)
+            print("filt_name", filt_name, "median_log10_R", median_log10_R, "median_log10_unc", median_log10_unc, "mean_hours", mean_hours, "number_of_stars", number_of_stars)
         
             
             for log10_mass in log10_masses:
                 f.write("cd " + pwd + "/monte_carlo_results/\n")
                 f.write("echo 'median_log_R %f'\n" % median_log10_R)
-                f.write("echo 'star_hours %f'\n" % star_hours)
+                f.write("echo 'mean_hours %f'\n" % mean_hours)
+                f.write("echo 'number_of_stars %.1f'\n" % number_of_stars)
                 f.write("echo 'filt_name %s'\n" % filt_name)
                 f.write("echo 'log10_mass %f'\n" % log10_mass)
-                f.write("python /home/drubin/NIRCam_ramp/step12_get_lens_count.py "  + str(10**median_log10_R) + " " + str(star_hours) + " " + str(10**median_log10_unc) + (" %.3g" % (10**log10_mass)) + " " + target + " " + str(cadence) + ' \n')
+                f.write("python /home/drubin/NIRCam_ramp/step12_get_lens_count.py "  + str(10**median_log10_R) + " " + str(mean_hours) + " " + str(10**median_log10_unc) + (" %.3g" % (10**log10_mass)) + " " + target + " " + str(cadence) + ' \n')
                 jobs_by_filt[filt_name] += 1
 
             f.write("echo 'done'\n")
@@ -107,4 +113,3 @@ source ~/.bash_profile
 f = open("jobs.txt", 'w')
 f.write(str(jobs_by_filt))
 f.close()
-
