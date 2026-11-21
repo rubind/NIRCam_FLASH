@@ -35,6 +35,11 @@ def parse_args():
     )
     parser.add_argument("input_files", nargs="+", help="Monte Carlo result files.")
     parser.add_argument(
+        "--filter",
+        default="F150W",
+        help="Exact filter name for the Milky Way constraint text file (default: F150W).",
+    )
+    parser.add_argument(
         "--output",
         default="sum_results.pdf",
         help=(
@@ -205,12 +210,16 @@ def single_population_output_path(output_file, suffix):
     return output_file.with_name(f"{stem}_{suffix}{extension}")
 
 
-def write_f150w_constraints(counts, population, output_file):
+def write_constraints(counts, population, filter_name, output_file):
     series = population_series(counts, population)
-    if "F150W" not in series:
+    if filter_name not in series:
+        print(
+            f"No text file written: filter {filter_name!r} not found for {population}. "
+            f"Available filters: {', '.join(sorted(series))}"
+        )
         return
 
-    masses, n_exp = series["F150W"]
+    masses, n_exp = series[filter_name]
     positive = n_exp > 0.0
     writecol(
         str(output_file),
@@ -235,15 +244,11 @@ def main():
         print(f"Wrote {this_output_file}")
 
     scale_label = str(args.scale_by)
-    write_f150w_constraints(
+    write_constraints(
         counts,
         "Milky Way",
-        Path(f"constraint_sum_F150W_{scale_label}x.txt"),
-    )
-    write_f150w_constraints(
-        counts,
-        "M31",
-        Path(f"constraint_sum_F150W_M31_{scale_label}x.txt"),
+        args.filter,
+        Path(f"constraint_sum_{args.filter}_{scale_label}x.txt"),
     )
 
 

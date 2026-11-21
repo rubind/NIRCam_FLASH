@@ -171,11 +171,11 @@ def plot_expected_events(values, target_filter, populations, output_file):
 
         axis.set_title(population)
         axis.set_xlabel(r"$\log_{10}(M_{\mathrm{PBH}}/M_{\odot})$")
-        axis.set_xlim(-11.0, -5.0)
+        axis.set_xlim(-12.0, -5.0)
         axis.set_ylim(bottom=0.0)
         default_ymax = axis.get_ylim()[1]
         axis.set_ylim(0.0, 1.05 * default_ymax)
-        axis.ticklabel_format(axis="y", style="sci", scilimits=(-2, 2))
+        axis.ticklabel_format(axis="y", style="plain", useOffset=False)
 
     axes[0].set_ylabel("Expected Number of Detectable Lensing Events")
     fig.suptitle(target_filter)

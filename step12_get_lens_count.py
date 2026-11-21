@@ -335,6 +335,7 @@ def simulate_star_mc_fast_eff(
     s_sampler: Optional[Tuple[np.ndarray, np.ndarray]] = None,
     uth_table: Optional[Tuple[np.ndarray, np.ndarray]] = None,
     record_pairs: bool = True,
+    record_events: bool = False,
 ) -> Dict[str, Any]:
     """
     Returns efficiency (dimensionless), plus optional (A_peak, x) for detected
@@ -343,6 +344,11 @@ def simulate_star_mc_fast_eff(
     Detection is based on the sampled dynamic range A_max/A_min >= Ath, not on
     an absolute magnification measurement.  Event peaks remain restricted to
     the observing window, preserving lambda=rate*T_obs*epsilon.
+
+    With record_events=True, detected_events contains arrays of the raw hit
+    parameters. Sample these with probability proportional to event_weight;
+    the trials are not an unweighted sample of the event-rate distribution.
+    Recording consumes no random numbers and does not change the rate estimate.
     """
     t_sorted = np.asarray(star.times_s, dtype=float)
     if t_sorted.ndim != 1 or len(t_sorted) < 2:
@@ -369,7 +375,7 @@ def simulate_star_mc_fast_eff(
     feasible = u_th > 0.0
     n_feasible = int(np.count_nonzero(feasible))
     if n_feasible == 0:
-        return {
+        result = {
             "name": star.name,
             "epsilon": 0.0,
             "sigma_epsilon": 0.0,
@@ -378,6 +384,14 @@ def simulate_star_mc_fast_eff(
             "n_hits": 0,
             "pairs_Apeak_x": [],
         }
+        if record_events:
+            result["detected_events"] = {
+                key: np.array([], dtype=float) for key in (
+                    "distance_m", "x", "vperp_m_s", "t0_s", "tE_s", "u0", "rho", "event_weight",
+                )
+            }
+            result["detected_events"]["trial_index"] = np.array([], dtype=int)
+        return result
 
     vperp = draw_v_perp(N, cfg.sigma_v)
     tE = RE / np.maximum(vperp, 1.0)
@@ -478,7 +492,7 @@ def simulate_star_mc_fast_eff(
         A_peak = np.array([A_finite(float(u), float(r)) for u, r in zip(u0[pair_idx], rho[pair_idx])], dtype=float)
         pairs = list(zip(A_peak.tolist(), x[pair_idx].tolist()))
 
-    return {
+    result = {
         "name": star.name,
         "epsilon": float(epsilon),
         "sigma_epsilon": float(sigma_epsilon),
@@ -488,6 +502,19 @@ def simulate_star_mc_fast_eff(
         "n_effective": float(n_effective),
         "pairs_Apeak_x": pairs,
     }
+    if record_events:
+        result["detected_events"] = {
+            "trial_index": np.flatnonzero(hits),
+            "distance_m": s[hits],
+            "x": x[hits],
+            "vperp_m_s": vperp[hits],
+            "t0_s": t0[hits],
+            "tE_s": tE[hits],
+            "u0": u0[hits],
+            "rho": rho[hits],
+            "event_weight": event_weight[hits],
+        }
+    return result
 
 def run_mc_fast_eff(
     stars: List[Star],
@@ -699,7 +726,7 @@ M31_l = np.deg2rad(121.17)
 M31_b = np.deg2rad(-21.57)
 DS_M31 = 760.0 * kpc
 
-if __name__ == "__main__":
+def main():
     # Example: 3 stars, 400 hours, 20s cadence (as you used)
 
     
@@ -718,40 +745,33 @@ if __name__ == "__main__":
     #]
     stars_m31 = [Star(m_short=22.1, m_long=21.9, R_star_m=star_radius_rsol  * 6.957e8, times_s=times_s, name="M31-1", DS_m=DS_M31)]
 
-#Andromeda
+    halo_mw_to_m31 = NFWModel(r_s_m=16*kpc, rho_local_GeV_cm3=0.4, l_rad=M31_l, b_rad=M31_b)
+    halo_m31 = M31NFWModel(D_center_m=DS_M31)
+    Ath = 1.0 + one_sigma_phot*4
+    M = BH_mass * Msun
+    f_pbh = 1.0
+    sigma_v_mw = 160e3
+    # LensCalcPy's v_disp=250 km/s corresponds to sigma=v_disp/sqrt(2).
+    sigma_v_m31 = 250e3 / np.sqrt(2.0)
+    uth_table = build_uth_table(Ath=Ath)
+
+    population_result = run_population_breakdown(
+        stars_m31, M,
+        populations={
+            "Milky Way": (halo_mw_to_m31, sigma_v_mw),
+            "M31": (halo_m31, sigma_v_m31),
+        },
+        Ath=Ath, f_pbh=f_pbh, n_events_try=200_000, uth_table=uth_table,
+    )
+
+    for label, result in population_result["populations"].items():
+        row = result["rows_eff"][0]
+        print(f"{label:10s}: rate={result['rates']['M31-1']['rate']*3600:.6g}/hr, "
+              f"epsilon={row[1]:.5g} ± {row[2]:.2g}, "
+              f"N_exp={result['summary']['expected_events']:.6g}")
+    print("combined:", population_result["Lambda"], "±", population_result["sigma_Lambda"],
+          " P(>=1)=", population_result["P_at_least_one"])
 
 
-#t = np.arange(0, 0.63*7*6.4*1e6 * 3600, 270.0)
-#t = np.arange(0, 3600, 270.0)
-
-halo_mw_to_m31 = NFWModel(r_s_m=16*kpc, rho_local_GeV_cm3=0.4, l_rad=M31_l, b_rad=M31_b)
-halo_m31 = M31NFWModel(D_center_m=DS_M31)
-Ath = 1.0 + one_sigma_phot*4
-M = BH_mass * Msun
-f_pbh = 1.0
-sigma_v_mw = 160e3
-# LensCalcPy uses exp(-v^2/v_disp^2) with v_disp=250 km/s for M31,
-# equivalent to Rayleigh component sigma=v_disp/sqrt(2).
-sigma_v_m31 = 250e3 / np.sqrt(2.0)
-
-
-uth_table = build_uth_table(Ath=Ath)
-
-# Separate Monte Carlo runs are required because the two populations have
-# different distance and velocity distributions.
-population_result = run_population_breakdown(
-    stars_m31, M,
-    populations={
-        "Milky Way": (halo_mw_to_m31, sigma_v_mw),
-        "M31": (halo_m31, sigma_v_m31),
-    },
-    Ath=Ath, f_pbh=f_pbh, n_events_try=200_000, uth_table=uth_table,
-)
-
-for label, result in population_result["populations"].items():
-    row = result["rows_eff"][0]
-    print(f"{label:10s}: rate={result['rates']['M31-1']['rate']*3600:.6g}/hr, "
-          f"epsilon={row[1]:.5g} ± {row[2]:.2g}, "
-          f"N_exp={result['summary']['expected_events']:.6g}")
-print("combined:", population_result["Lambda"], "±", population_result["sigma_Lambda"],
-      " P(>=1)=", population_result["P_at_least_one"])
+if __name__ == "__main__":
+    main()
